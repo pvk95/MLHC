@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import roc_curve, auc, precision_recall_curve
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score
 
 mapping = {'A': [1, 0, 0, 0], 
            'T': [0, 1, 0, 0],
@@ -27,4 +27,6 @@ def get_scores(true_val, pred_val):
     
     precision, recall, _ = precision_recall_curve(true_val, pred_val)
     auprc = auc(recall, precision)
-    return (auroc, auprc)
+    
+    f1 = f1_score(true_val, pred_val)
+    return (auroc, auprc, f1)
