@@ -27,4 +27,6 @@ def get_scores(true_val, pred_val):
     
     precision, recall, _ = precision_recall_curve(true_val, pred_val)
     auprc = auc(recall, precision)
-    return (auroc, auprc)
+    
+    f1 = f1_score(true_val, pred_val)
+    return (auroc, auprc, f1)
