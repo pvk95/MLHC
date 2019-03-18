@@ -107,7 +107,8 @@ ENDSSH
 echo -e "Connecting to $CLUSTERNAME to start jupyter notebook in a batch job"
 ssh $USERNAME@$CHOSTNAME bsub -n $NUM_CORES -W $RUN_TIME -R "rusage[mem=$MEM_PER_CORE]"  <<ENDBSUB
 module load $PCOMMAND
-pip3 install --user imblearn
+cd ML4HC
+conda activate my_env
 export XDG_RUNTIME_DIR=
 IP_REMOTE="\$(hostname -i)"
 echo "Remote IP:\$IP_REMOTE" >> /cluster/home/$USERNAME/jnbip
