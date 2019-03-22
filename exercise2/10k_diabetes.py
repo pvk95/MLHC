@@ -3,6 +3,7 @@ from sklearn.svm import SVR
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import linecache
 import sklearn
 import string
 
@@ -14,13 +15,13 @@ test_df = pd.read_csv('project2_data/10k_diabetes/diab_test.csv')
 NaN_values = ['?', 'nan', 'Not Available', 'Not Mapped', 'None']
 
 # Prediction
-pred_columns = ['Unnamed: 0']
+pred_columns = ['readmitted']
 
 # All integer columns
-int_columns = ['time_in_hospital', 'num_lab_procedures',
+int_columns = ['Unnamed: 0', 'time_in_hospital', 'num_lab_procedures',
                'num_procedures', 'num_medications', 'number_outpatient',
                'number_emergency', 'number_inpatient', 'number_diagnoses',
-               'readmitted', 'diag_1', 'diag_2', 'diag_3'
+               'diag_1', 'diag_2', 'diag_3'
                ]
 
 # All categorical columns
@@ -158,8 +159,6 @@ print(f'The score on the validation set was {score:.3f}')
 ##************************************************** ##
 
 translator = str.maketrans('', '', string.punctuation)
-
-
 def vector_to_string(vector):
     vector = [str(s) for s in vector]
     joined_string = " ".join(vector)
@@ -174,3 +173,23 @@ valid_data_string = np.apply_along_axis(
     vector_to_string, 1, valid_df[str_columns].values)
 test_data_string = np.apply_along_axis(
     vector_to_string, 1, test_df[str_columns].values)
+
+# Load Word2Vec model
+# Downloaded from http://bioasq.org/news/bioasq-releases-continuous-space-word-vectors-obtained-applying-word2vec-pubmed-abstracts
+types_csv = pd.read_csv(
+    'project2_data/word2vec/types.txt', header=None, delimiter='\n')
+vectors_csv = pd.read_csv(
+    'project2_data/word2vec/vectors.txt', header=None, sep=' ',  delimiter='\n')
+
+
+def word2vec(data_string, types, vectors):
+    for string in data_string:
+        vector = []
+        for word in string.split(' '):
+            word = word.lower()
+            idx = np.where(types == word)
+            print(idx)
+            word_vec = vectors.iloc[idx[0][0]]
+            print(word_vec)
+
+word2vec(train_data_string, types_csv, vectors_csv)
