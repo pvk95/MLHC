@@ -159,6 +159,8 @@ print(f'The score on the validation set was {score:.3f}')
 ##************************************************** ##
 
 translator = str.maketrans('', '', string.punctuation)
+
+
 def vector_to_string(vector):
     vector = [str(s) for s in vector]
     joined_string = " ".join(vector)
@@ -180,16 +182,50 @@ types_csv = pd.read_csv(
     'project2_data/word2vec/types.txt', header=None, delimiter='\n')
 vectors_csv = pd.read_csv(
     'project2_data/word2vec/vectors.txt', header=None, sep=' ',  delimiter='\n')
+print('opened word2vec files')
 
 
 def word2vec(data_string, types, vectors):
-    for string in data_string:
-        vector = []
-        for word in string.split(' '):
-            word = word.lower()
-            idx = np.where(types == word)
-            print(idx)
-            word_vec = vectors.iloc[idx[0][0]]
-            print(word_vec)
+    data = []
+    for  sentence in data_string:
+        sentence_vector = []
 
-word2vec(train_data_string, types_csv, vectors_csv)
+        # Split sentence into words and find the corresponding vectors
+        for word in sentence.split(' '):
+            word = word.lower()
+            if word == '\n' or word == '':
+                continue
+
+            idx = np.where(types == word)
+
+            # If the wor isn't found - use "unk"
+            if len(idx[0]) == 0:
+                idx = np.where(types == 'unk')
+
+            word_vec = vectors.iloc[idx[0][0]]
+            sentence_vector.append(word_vec)
+
+        # Append EndOfSentence
+        sentence_vector.append(vectors.iloc[645536])
+        data.append(sentence_vector)
+    return data
+
+
+# Transform the string data into word2vec
+train_data_word2vec = word2vec(train_data_string, types_csv, vectors_csv)
+valid_data_word2vec = word2vec(valid_data_string, types_csv, vectors_csv)
+test_data_word2vec = word2vec(test_data_string, types_csv, vectors_csv)
+print('Finished word2vec transformation')
+
+# Save the data 
+np.save('project2_data/word2vec/train_word2vec.npy', train_data_word2vec)
+np.save('project2_data/word2vec/valid_word2vec.npy', valid_data_word2vec)
+np.save('project2_data/word2vec/test_word2vec.npy', test_data_word2vec)
+
+# Make space in the memory
+del types_csv
+del vectors_csv
+
+train_data_word2vec = np.load('project2_data/word2vec/train_word2vec.npy')
+valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
+test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
