@@ -1,11 +1,14 @@
 from sklearn.linear_model import LinearRegression
 from sklearn.svm import SVR
+from tensorflow import keras
 import tensorflow as tf
 import pandas as pd
 import numpy as np
+import multiprocessing
 import linecache
 import sklearn
 import string
+import time
 
 # Importing dataframes
 train_df = pd.read_csv('project2_data/10k_diabetes/diab_train.csv')
@@ -155,7 +158,7 @@ print(f'The score on the validation set was {score:.3f}')
 
 
 ##************************************************** ##
-#                String                              ##
+#                Word2Vec                            ##
 ##************************************************** ##
 
 translator = str.maketrans('', '', string.punctuation)
@@ -185,42 +188,47 @@ vectors_csv = pd.read_csv(
 print('opened word2vec files')
 
 
-def word2vec(data_string, types, vectors):
-    data = []
-    for  sentence in data_string:
+def process_chunk(chunk):
+    processed_chunk = []
+    for sentence in chunk:
         sentence_vector = []
-
-        # Split sentence into words and find the corresponding vectors
         for word in sentence.split(' '):
             word = word.lower()
             if word == '\n' or word == '':
                 continue
-
-            idx = np.where(types == word)
+            idx = np.where(types_csv == word)
 
             # If the wor isn't found - use "unk"
             if len(idx[0]) == 0:
-                idx = np.where(types == 'unk')
+                idx = np.where(types_csv == 'unk')
 
-            word_vec = vectors.iloc[idx[0][0]]
+            word_vec = vectors_csv.iloc[idx[0][0]].values
             sentence_vector.append(word_vec)
+        sentence_vector.append(vectors_csv.iloc[645536].values)
+        processed_chunk.append(sentence_vector)
+    return processed_chunk
 
-        # Append EndOfSentence
-        sentence_vector.append(vectors.iloc[645536])
-        data.append(sentence_vector)
-    return data
+
+def word2vec_parallel(data_string):
+    cores = multiprocessing.cpu_count()
+    chunks = np.array_split(data_string, cores)
+    pool = multiprocessing.Pool(cores)
+    results = pool.map(process_chunk, chunks)
+    results = np.hstack(results)
+    print(results.shape)
+    return results
 
 
 # Transform the string data into word2vec
-train_data_word2vec = word2vec(train_data_string, types_csv, vectors_csv)
-valid_data_word2vec = word2vec(valid_data_string, types_csv, vectors_csv)
-test_data_word2vec = word2vec(test_data_string, types_csv, vectors_csv)
-print('Finished word2vec transformation')
+#valid_data_word2vec = word2vec_parallel(valid_data_string)
+#train_data_word2vec = word2vec(train_data_string, types_csv, vectors_csv)
+#test_data_word2vec = word2vec(test_data_string, types_csv, vectors_csv)
+#print('Finished word2vec transformation')
 
-# Save the data 
-np.save('project2_data/word2vec/train_word2vec.npy', train_data_word2vec)
-np.save('project2_data/word2vec/valid_word2vec.npy', valid_data_word2vec)
-np.save('project2_data/word2vec/test_word2vec.npy', test_data_word2vec)
+# Save the data
+#np.save('project2_data/word2vec/train_word2vec.npy', train_data_word2vec)
+#np.save('project2_data/word2vec/valid_word2vec.npy', valid_data_word2vec)
+#np.save('project2_data/word2vec/test_word2vec.npy', test_data_word2vec)
 
 # Make space in the memory
 del types_csv
@@ -229,3 +237,51 @@ del vectors_csv
 train_data_word2vec = np.load('project2_data/word2vec/train_word2vec.npy')
 valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
 test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
+print('Loaded word2vec transformation')
+
+
+# Transform word2vec into floats
+def transform(array):
+    return [[[float(val) for val in word[0].split(" ")] for word in sentence] for sentence in array]
+
+
+train_data_word2vec = transform(train_data_word2vec)
+valid_data_word2vec = transform(valid_data_word2vec)
+test_data_word2vec = transform(test_data_word2vec)
+print("Transformed the string-vector into floats")
+
+
+# Find the maximum sentence length
+def find_max(array):
+    return max([len(sentence) for sentence in array])
+
+
+train_max = find_max(train_data_word2vec)
+valid_max = find_max(valid_data_word2vec)
+test_max = find_max(test_data_word2vec)
+final_max = max([train_max, valid_max, test_max])
+print(f"The maximum length of a sentence is {final_max}.")
+
+
+# Zero pad the sentences - such that everything has has the same length
+def zero_pad(array, max_length, word_vec_length):
+    return [[sentence[idx] if idx < len(sentence) else np.zeros((word_vec_length)) for idx in range(max_length)] for sentence in array]
+
+word_vec_length = 200
+train_data_word2vec = zero_pad(train_data_word2vec, final_max, 200)
+valid_data_word2vec = zero_pad(valid_data_word2vec, final_max, 200)
+test_data_word2vec = zero_pad(test_data_word2vec, final_max, 200)
+print(f"Zero padded all the word-vectors to length {word_vec_length}")
+import pdb; pdb.set_trace()
+
+##************************************************** ##
+##                    String                         ##
+##************************************************** ##
+
+batch_size = 64
+epochs = 10
+
+
+sentence_input = keras.layers.Input(
+    shape=(None, )
+)
