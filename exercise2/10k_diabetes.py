@@ -138,15 +138,20 @@ train_data_numerical = train_data_numerical.fillna(
     train_data_numerical.median())
 valid_data_numerical = valid_data_numerical.fillna(
     train_data_numerical.median())
-test_data_numerical = test_data_numerical.fillna(train_data_numerical.median())
+test_data_numerical = test_data_numerical.fillna(
+    train_data_numerical.median())
 
 ##************************************************** ##
 #                Testing Linear Regression           ##
 ##************************************************** ##
 
-reg = LogisticRegression().fit(train_data_numerical.values, train_y)
+reg = LogisticRegression(solver='lbfgs').fit(
+    train_data_numerical.values, train_y)
 score = reg.score(valid_data_numerical.values, valid_y)
-print(f'The score on the validation set was {score:.3f}')
+f1 = f1_score(test_y.values, reg.predict(
+    test_data_numerical.values))
+print(f'The score on the validation set was {score:.3f} - \
+    the f1-score was {f1:.3f}')
 
 ##************************************************** ##
 #                Testing SVM                         ##
@@ -156,7 +161,10 @@ svc = SVC(gamma='scale').fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
-print(f'The score on the validation set was {score:.3f}')
+f1 = f1_score(test_y.values, svc.predict(
+    test_data_numerical.values))
+print(f'The score on the validation set was {score:.3f} - \
+     the f1_score {f1:.3f}')
 
 
 ##************************************************** ##
@@ -320,7 +328,8 @@ plt.show()
 
 
 # Combined classifier
-prediction = (model.predict(test_data_word2vec) + reg.predict_proba(test_data_numerical.values))/2.0
-y_test_prd = prediction > 0.5
+prediction = (model.predict(test_data_word2vec) +
+              reg.predict_proba(test_data_numerical.values))/2.0
+y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 print(f"The f1_score on the test_set was {f1_test}")
