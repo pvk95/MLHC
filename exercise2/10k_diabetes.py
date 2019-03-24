@@ -1,5 +1,7 @@
-from sklearn.linear_model import LinearRegression
-from sklearn.svm import SVR
+import pdb
+from sklearn.metrics import f1_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
 from tensorflow import keras
 import tensorflow as tf
 import pandas as pd
@@ -142,7 +144,7 @@ test_data_numerical = test_data_numerical.fillna(train_data_numerical.median())
 #                Testing Linear Regression           ##
 ##************************************************** ##
 
-reg = LinearRegression().fit(train_data_numerical.values, train_y)
+reg = LogisticRegression().fit(train_data_numerical.values, train_y)
 score = reg.score(valid_data_numerical.values, valid_y)
 print(f'The score on the validation set was {score:.3f}')
 
@@ -150,7 +152,7 @@ print(f'The score on the validation set was {score:.3f}')
 #                Testing SVM                         ##
 ##************************************************** ##
 
-svc = SVR(gamma='scale').fit(
+svc = SVC(gamma='scale').fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
@@ -239,8 +241,9 @@ valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
 test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
 print('Loaded word2vec transformation')
 
-
 # Transform word2vec into floats
+
+
 def transform(array):
     return [[[float(val) for val in word[0].split(" ")] for word in sentence] for sentence in array]
 
@@ -267,21 +270,36 @@ print(f"The maximum length of a sentence is {final_max}.")
 def zero_pad(array, max_length, word_vec_length):
     return [[sentence[idx] if idx < len(sentence) else np.zeros((word_vec_length)) for idx in range(max_length)] for sentence in array]
 
+
 word_vec_length = 200
 train_data_word2vec = zero_pad(train_data_word2vec, final_max, 200)
 valid_data_word2vec = zero_pad(valid_data_word2vec, final_max, 200)
 test_data_word2vec = zero_pad(test_data_word2vec, final_max, 200)
 print(f"Zero padded all the word-vectors to length {word_vec_length}")
-import pdb; pdb.set_trace()
+
+
+train_data_word2vec = np.array(train_data_word2vec)
+valid_data_word2vec = np.array(valid_data_word2vec)
+test_data_word2vec = np.array(test_data_word2vec)
+print(" transformed everything into ")
 
 ##************************************************** ##
-##                    String                         ##
+##                    RNN-Training                   ##
 ##************************************************** ##
 
 batch_size = 64
-epochs = 10
+epochs = 3
 
 
-sentence_input = keras.layers.Input(
-    shape=(None, )
-)
+model = keras.Sequential()
+model.add(keras.layers.LSTM(200, input_shape=(final_max, word_vec_length)))
+model.add(keras.layers.Dense(1, activation="sigmoid"))
+model.compile(loss="binary_crossentropy", optimizer="adam")
+model.fit(train_data_word2vec, train_y.values,
+          epochs=epochs, batch_size=batch_size)
+
+pdb.set_trace()
+prediction = model.predict(valid_data_word2vec)
+y_test_pred = prediction > 0.5
+f1_test = f1_score(test_y.values, y_test_pred)
+print(f"The f1_score on the test_set was {f1_test}")
