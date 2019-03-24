@@ -348,7 +348,6 @@ plt.show()
 # Combined classifier
 prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
               reg.predict_proba(test_data_numerical.values)[:, 1])/2.0
-
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
