@@ -231,8 +231,8 @@ def word2vec_parallel(data_string):
 
 # Transform the string data into word2vec
 #valid_data_word2vec = word2vec_parallel(valid_data_string)
-#train_data_word2vec = word2vec_parallel(train_data_string, types_csv, vectors_csv)
-#test_data_word2vec = word2vec_parallel(test_data_string, types_csv, vectors_csv)
+#train_data_word2vec = word2vec_parallel(train_data_string)
+#test_data_word2vec = word2vec_parallel(test_data_string)
 #print('Finished word2vec transformation')
 
 # Save the data
