@@ -55,8 +55,8 @@ category_map = {'race': {'AfricanAmerican': 0, 'Caucasian': 1, 'Asian': 2, 'Othe
                 'A1Cresult': {'None': 0, '>8': 1, 'Norm': 2, '>7': 3},
                 'metformin': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'repaglinide': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
-                'nateglinide': {'No': 0, 'Steady': 1, 'Up': 2},
-                'chlorpropamide': {'No': 0, 'Steady': 1},
+                'nateglinide': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
+                'chlorpropamide': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'glimepiride': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'acetohexamide': {'No': 0},
                 'glipizide': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
@@ -64,7 +64,7 @@ category_map = {'race': {'AfricanAmerican': 0, 'Caucasian': 1, 'Asian': 2, 'Othe
                 'tolbutamide': {'No': 0, 'Steady': 1},
                 'pioglitazone': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'rosiglitazone': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
-                'acarbose': {'No': 0, 'Steady': 1, 'Up': 2},
+                'acarbose': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'miglitol': {'No': 0, 'Steady': 1, 'Up': 2, 'Down': 3},
                 'troglitazone': {'No': 0},
                 'tolazamide': {'No': 0, 'Steady': 1},
@@ -104,6 +104,7 @@ def fix_integers(df, int_columns):
 def fix_categories(df, cat_columns, cat_map):
     for column in cat_columns:
         df[column] = df[column].replace(cat_map[column])
+        df[column] = df[column].astype('float64')
     return df
 
 
@@ -120,7 +121,6 @@ test_df = fix_integers(test_df, int_columns)
 train_df = fix_categories(train_df, cat_columns, category_map)
 valid_df = fix_categories(valid_df, cat_columns, category_map)
 test_df = fix_categories(test_df, cat_columns, category_map)
-
 
 # Create data for  later fixing
 train_data_numerical = train_df[cat_columns + int_columns]
