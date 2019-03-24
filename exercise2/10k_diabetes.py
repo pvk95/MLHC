@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, roc_curve, auc
 from sklearn.linear_model import LogisticRegression
 from tensorflow import keras
 from sklearn.svm import SVC
@@ -289,14 +289,18 @@ print(f"Zero padded all the word-vectors to length {word_vec_length}")
 train_data_word2vec = np.array(train_data_word2vec)
 valid_data_word2vec = np.array(valid_data_word2vec)
 test_data_word2vec = np.array(test_data_word2vec)
-print(" transformed everything into numpy array")
+print("eransformed everything into numpy array")
 
 ##************************************************** ##
 ##                    RNN-Training                   ##
 ##************************************************** ##
 
 batch_size = 64
-epochs = 10
+epochs = 50
+class_weight = {
+    0: 0.34,
+    1: 0.66
+}
 
 combined_data = np.vstack([train_data_word2vec, valid_data_word2vec])
 combined_y = np.hstack([train_y.values, valid_y.values])
@@ -309,12 +313,21 @@ model.compile(loss="binary_crossentropy", optimizer="adam",
               metrics=["binary_accuracy"])
 history = model.fit(combined_data, combined_y, validation_split=0.25,
                     epochs=epochs, batch_size=batch_size,
-                    shuffle=True)
+                    shuffle=True, class_weight=class_weight)
+
+
+##************************************************** ##
+##                    Evaluation                     ##
+##************************************************** ##
+
 
 prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
+fpr, tpr, threshold = roc_curve(test_y.values, prediction)
+auroc = auc(fpr, tpr)
 print(f"The f1_score on the test_set was {f1_test}")
+print(f"The auroc on the test_set was {auroc}")
 
 
 # Plot the accuracy
@@ -327,9 +340,18 @@ plt.legend(['train', 'valid'], loc='upper left')
 plt.show()
 
 
+##************************************************** ##
+##               Combined Classifier                 ##
+##************************************************** ##
+
+
 # Combined classifier
-prediction = (model.predict(test_data_word2vec) +
-              reg.predict_proba(test_data_numerical.values))/2.0
+prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
+              reg.predict_proba(test_data_numerical.values)[:, 1])/2.0
+
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
+fpr, tpr, threshold = roc_curve(test_y.values, prediction)
+auroc = auc(fpr, tpr)
 print(f"The f1_score on the test_set was {f1_test}")
+print(f"The auroc on the test_set was {auroc}")
