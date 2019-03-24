@@ -1,8 +1,8 @@
-import pdb
 from sklearn.metrics import f1_score
 from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
 from tensorflow import keras
+from sklearn.svm import SVC
+import matplotlib.pyplot as plt
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -281,25 +281,46 @@ print(f"Zero padded all the word-vectors to length {word_vec_length}")
 train_data_word2vec = np.array(train_data_word2vec)
 valid_data_word2vec = np.array(valid_data_word2vec)
 test_data_word2vec = np.array(test_data_word2vec)
-print(" transformed everything into ")
+print(" transformed everything into numpy array")
 
 ##************************************************** ##
 ##                    RNN-Training                   ##
 ##************************************************** ##
 
 batch_size = 64
-epochs = 3
+epochs = 10
+
+combined_data = np.vstack([train_data_word2vec, valid_data_word2vec])
+combined_y = np.hstack([train_y.values, valid_y.values])
 
 
 model = keras.Sequential()
 model.add(keras.layers.LSTM(200, input_shape=(final_max, word_vec_length)))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
-model.compile(loss="binary_crossentropy", optimizer="adam")
-model.fit(train_data_word2vec, train_y.values,
-          epochs=epochs, batch_size=batch_size)
+model.compile(loss="binary_crossentropy", optimizer="adam",
+              metrics=["binary_accuracy"])
+history = model.fit(combined_data, combined_y, validation_split=0.25,
+                    epochs=epochs, batch_size=batch_size,
+                    shuffle=True)
 
-pdb.set_trace()
-prediction = model.predict(valid_data_word2vec)
+prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
+f1_test = f1_score(test_y.values, y_test_pred)
+print(f"The f1_score on the test_set was {f1_test}")
+
+
+# Plot the accuracy
+plt.plot(history.history['binary_accuracy'])
+plt.plot(history.history['val_binary_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'valid'], loc='upper left')
+plt.show()
+
+
+# Combined classifier
+prediction = (model.predict(test_data_word2vec) + reg.predict_proba(test_data_numerical.values))/2.0
+y_test_prd = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 print(f"The f1_score on the test_set was {f1_test}")
