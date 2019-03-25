@@ -158,7 +158,7 @@ print(f'The score on the validation set was {score:.3f} - \
 #                Testing SVM                         ##
 ##************************************************** ##
 
-svc = SVC(gamma='scale', class_weight='balanced').fit(
+svc = SVC(gamma='scale', class_weight='balanced', probability=True).fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
@@ -346,7 +346,7 @@ plt.show()
 
 # Combined classifier
 prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
-              svc.predict_proba(test_data_numerical.values)[:,1])/2.0
+              svc.predict_proba(test_data_numerical.values)[:, 1])/2.0
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
