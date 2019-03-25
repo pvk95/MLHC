@@ -157,7 +157,7 @@ print(f'The score on the validation set was {score:.3f} - \
 #                Testing SVM                         ##
 ##************************************************** ##
 
-svc = SVC(gamma='scale').fit(
+svc = SVC(gamma='scale', class_weight='balanced').fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
