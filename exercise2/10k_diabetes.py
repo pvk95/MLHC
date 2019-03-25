@@ -43,9 +43,10 @@ cat_columns = ['race', 'gender', 'age', 'weight',
 
 # All string columns
 str_columns = ['diag_1_desc', 'diag_2_desc', 'diag_3_desc', 'payer_code',
-               'admission_source_id', 'medical_specialty', 'admission_type_id',
-               'discharge_disposition_id'
                ]
+#               'admission_source_id', 'medical_specialty', 'admission_type_id',
+#               'discharge_disposition_id'
+#               ]
 
 category_map = {'race': {'AfricanAmerican': 0, 'Caucasian': 1, 'Asian': 2, 'Other': 3, 'Hispanic': 4, '?': np.NaN},
                 'gender': {'Male': 0, 'Female': 1},
@@ -157,7 +158,7 @@ print(f'The score on the validation set was {score:.3f} - \
 #                Testing SVM                         ##
 ##************************************************** ##
 
-svc = SVC(gamma='scale').fit(
+svc = SVC(gamma='scale', class_weight='balanced').fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
@@ -225,7 +226,6 @@ def word2vec_parallel(data_string):
     pool = multiprocessing.Pool(cores)
     results = pool.map(process_chunk, chunks)
     results = np.hstack(results)
-    print(results.shape)
     return results
 
 
@@ -249,9 +249,8 @@ valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
 test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
 print('Loaded word2vec transformation')
 
+
 # Transform word2vec into floats
-
-
 def transform(array):
     return [[[float(val) for val in word[0].split(" ")] for word in sentence] for sentence in array]
 
@@ -296,7 +295,7 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 20
+epochs = 15
 class_weight = {
     0: 0.34,
     1: 0.66
@@ -347,7 +346,7 @@ plt.show()
 
 # Combined classifier
 prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
-              reg.predict_proba(test_data_numerical.values)[:, 1])/2.0
+              svc.decision_function(test_data_numerical.values))/2.0
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
