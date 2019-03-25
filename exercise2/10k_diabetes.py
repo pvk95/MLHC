@@ -165,7 +165,7 @@ score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
 f1 = f1_score(test_y.values, svc.predict(
     test_data_numerical.values))
 print(f'The score on the validation set was {score:.3f} - \
-     the f1_score {f1:.3f}')
+    the f1_score {f1:.3f}')
 
 
 ##************************************************** ##
