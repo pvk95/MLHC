@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score, roc_curve, auc
+from sklearn.metrics import f1_score, roc_curve, precision_recall_curve, auc
 from sklearn.linear_model import LogisticRegression
 from tensorflow import keras
 from sklearn.svm import SVC
@@ -235,23 +235,23 @@ def word2vec_parallel(data_string):
 
 
 # Transform the string data into word2vec
-valid_data_word2vec = word2vec_parallel(valid_data_string)
-train_data_word2vec = word2vec_parallel(train_data_string)
-test_data_word2vec = word2vec_parallel(test_data_string)
-print('Finished word2vec transformation')
+#valid_data_word2vec = word2vec_parallel(valid_data_string)
+#train_data_word2vec = word2vec_parallel(train_data_string)
+#test_data_word2vec = word2vec_parallel(test_data_string)
+#print('Finished word2vec transformation')
 
 # Save the data
-np.save('project2_data/word2vec/train_word2vec_1.npy', train_data_word2vec)
-np.save('project2_data/word2vec/valid_word2vec_1.npy', valid_data_word2vec)
-np.save('project2_data/word2vec/test_word2vec_1.npy', test_data_word2vec)
+#np.save('project2_data/word2vec/train_word2vec_1.npy', train_data_word2vec)
+#np.save('project2_data/word2vec/valid_word2vec_1.npy', valid_data_word2vec)
+#np.save('project2_data/word2vec/test_word2vec_1.npy', test_data_word2vec)
 
 # Make space in the memory
 del types_csv
 del vectors_csv
 
-train_data_word2vec = np.load('project2_data/word2vec/train_word2vec.npy')
-valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
-test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
+train_data_word2vec = np.load('project2_data/word2vec/train_word2vec_1.npy')
+valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec_1.npy')
+test_data_word2vec = np.load('project2_data/word2vec/test_word2vec_1.npy')
 print('Loaded word2vec transformation')
 
 
@@ -300,7 +300,7 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 15
+epochs = 10
 class_weight = {
     0: 0.34,
     1: 0.66
@@ -313,11 +313,29 @@ combined_y = np.hstack([train_y.values, valid_y.values])
 model = keras.Sequential()
 model.add(keras.layers.LSTM(200, input_shape=(final_max, word_vec_length)))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
-model.compile(loss="binary_crossentropy", optimizer="adam",
+model.compile(loss="mean_squared_error", optimizer="adam",
               metrics=["binary_accuracy"])
 history = model.fit(combined_data, combined_y, validation_split=0.25,
                     epochs=epochs, batch_size=batch_size,
-                    shuffle=True, class_weight=class_weight, verbose=0)
+                    shuffle=True, class_weight=class_weight, verbose=1)
+
+# Plot the accuracy
+plt.plot(history.history['binary_accuracy'])
+plt.plot(history.history['val_binary_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['train', 'valid'], loc='upper left')
+plt.show()
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'valid'], loc='upper left')
+plt.show()
+
 
 
 ##************************************************** ##
@@ -329,19 +347,13 @@ prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
+precision, recall, _ = precision_recall_curve(test_y.values, prediction)
 auroc = auc(fpr, tpr)
+aurprc = auc(recall, precision)
 print(f"The f1_score on the test_set was {f1_test}")
 print(f"The auroc on the test_set was {auroc}")
+print(f"The auprc on the test_set was {aurprc}")
 
-
-# Plot the accuracy
-plt.plot(history.history['binary_accuracy'])
-plt.plot(history.history['val_binary_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
 
 
 ##************************************************** ##
@@ -355,6 +367,9 @@ prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
+precision, recall, _ = precision_recall_curve(test_y.values, prediction)
 auroc = auc(fpr, tpr)
+aurprc = auc(recall, precision)
 print(f"The f1_score on the test_set was {f1_test}")
 print(f"The auroc on the test_set was {auroc}")
+print(f"The auprc on the test_set was {aurprc}")
