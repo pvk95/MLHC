@@ -215,11 +215,12 @@ def process_chunk(chunk):
 
             # If the wor isn't found - use "unk"
             if len(idx[0]) == 0:
-                idx = np.where(types_csv == 'unk')
+                #idx = np.where(types_csv == 'unk')
+                continue
 
             word_vec = vectors_csv.iloc[idx[0][0]].values
             sentence_vector.append(word_vec)
-        sentence_vector.append(vectors_csv.iloc[645536].values)
+        #sentence_vector.append(vectors_csv.iloc[645536].values)
         processed_chunk.append(sentence_vector)
     return processed_chunk
 
@@ -234,15 +235,15 @@ def word2vec_parallel(data_string):
 
 
 # Transform the string data into word2vec
-#valid_data_word2vec = word2vec_parallel(valid_data_string)
-#train_data_word2vec = word2vec_parallel(train_data_string)
-#test_data_word2vec = word2vec_parallel(test_data_string)
-#print('Finished word2vec transformation')
+valid_data_word2vec = word2vec_parallel(valid_data_string)
+train_data_word2vec = word2vec_parallel(train_data_string)
+test_data_word2vec = word2vec_parallel(test_data_string)
+print('Finished word2vec transformation')
 
 # Save the data
-#np.save('project2_data/word2vec/train_word2vec.npy', train_data_word2vec)
-#np.save('project2_data/word2vec/valid_word2vec.npy', valid_data_word2vec)
-#np.save('project2_data/word2vec/test_word2vec.npy', test_data_word2vec)
+np.save('project2_data/word2vec/train_word2vec_1.npy', train_data_word2vec)
+np.save('project2_data/word2vec/valid_word2vec_1.npy', valid_data_word2vec)
+np.save('project2_data/word2vec/test_word2vec_1.npy', test_data_word2vec)
 
 # Make space in the memory
 del types_csv
