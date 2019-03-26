@@ -192,6 +192,10 @@ test_data_string = np.apply_along_axis(
 
 # Load Word2Vec model
 # Downloaded from http://bioasq.org/news/bioasq-releases-continuous-space-word-vectors-obtained-applying-word2vec-pubmed-abstracts
+# ! mkdir -p project2_data/word2vec/
+# ! wget -O file.tar.gz  http://bioasq.lip6.fr/tools/BioASQword2vec/ 
+# ! tar -C project2_data/word2vec -xvf file.tar.gz --strip 1 
+# ! rm file.tar.gz
 types_csv = pd.read_csv(
     'project2_data/word2vec/types.txt', header=None, delimiter='\n')
 vectors_csv = pd.read_csv(
