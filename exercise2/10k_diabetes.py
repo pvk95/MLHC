@@ -42,10 +42,10 @@ cat_columns = ['race', 'gender', 'age', 'weight',
 
 
 # All string columns
-str_columns = ['diag_1_desc', 'diag_2_desc', 'diag_3_desc', 'payer_code',
+str_columns = ['diag_1_desc', 'diag_2_desc', 'diag_3_desc'
                ]
 #               'admission_source_id', 'medical_specialty', 'admission_type_id',
-#               'discharge_disposition_id'
+#               'discharge_disposition_id', 'payer_code'
 #               ]
 
 category_map = {'race': {'AfricanAmerican': 0, 'Caucasian': 1, 'Asian': 2, 'Other': 3, 'Hispanic': 4, '?': np.NaN},
@@ -193,8 +193,8 @@ test_data_string = np.apply_along_axis(
 # Load Word2Vec model
 # Downloaded from http://bioasq.org/news/bioasq-releases-continuous-space-word-vectors-obtained-applying-word2vec-pubmed-abstracts
 # ! mkdir -p project2_data/word2vec/
-# ! wget -O file.tar.gz  http://bioasq.lip6.fr/tools/BioASQword2vec/ 
-# ! tar -C project2_data/word2vec -xvf file.tar.gz --strip 1 
+# ! wget -O file.tar.gz  http://bioasq.lip6.fr/tools/BioASQword2vec/
+# ! tar -C project2_data/word2vec -xvf file.tar.gz --strip 1
 # ! rm file.tar.gz
 types_csv = pd.read_csv(
     'project2_data/word2vec/types.txt', header=None, delimiter='\n')
