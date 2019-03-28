@@ -301,6 +301,8 @@ print("Transformed everything into numpy array")
 
 batch_size = 64
 epochs = 15
+hidden_layer = 200
+
 class_weight = {
     0: 0.34,
     1: 0.66
@@ -311,7 +313,7 @@ combined_y = np.hstack([train_y.values, valid_y.values])
 
 
 model = keras.Sequential()
-model.add(keras.layers.LSTM(200, input_shape=(final_max, word_vec_length)))
+model.add(keras.layers.LSTM(hidden_layer, input_shape=(final_max, word_vec_length)))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
 model.compile(loss="binary_crossentropy", optimizer="adam",
               metrics=["binary_accuracy"])
@@ -358,3 +360,14 @@ fpr, tpr, threshold = roc_curve(test_y.values, prediction)
 auroc = auc(fpr, tpr)
 print(f"The f1_score on the test_set was {f1_test}")
 print(f"The auroc on the test_set was {auroc}")
+
+
+
+##************************************************** ##
+##                Attention Mechanism                ##
+##************************************************** ##
+
+model = keras.Sequential()
+model.add(keras.layers.LSTM())
+
+
