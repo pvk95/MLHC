@@ -336,8 +336,8 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 10
-hidden_layer = 200
+epochs = 20
+hidden_layer = 32
 class_weight = {
     0: 0.34,
     1: 0.66
