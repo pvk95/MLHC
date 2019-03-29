@@ -336,9 +336,8 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 15
+epochs = 10
 hidden_layer = 200
-
 class_weight = {
     0: 0.34,
     1: 0.66
@@ -351,12 +350,18 @@ combined_y = np.hstack([train_y.values, valid_y.values])
 model = keras.Sequential()
 model.add(keras.layers.LSTM(hidden_layer,
                             input_shape=(final_max, word_vec_length)))
+model.add(keras.layers.Dropout(0.5))
+model.add(keras.layers.Dense(100, activation="relu"))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
-model.compile(loss="mean_squared_error", optimizer="adam",
+model.compile(loss="binary_crossentropy", optimizer="adam",
               metrics=["binary_accuracy"])
 history = model.fit(combined_data, combined_y, validation_split=0.25,
-                    epochs=epochs, batch_size=batch_size,
-                    shuffle=True, class_weight=class_weight, verbose=1)
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1)
+
+##************************************************** ##
+##                    Evaluation                     ##
+##************************************************** ##
 
 # Plot the accuracy
 plt.plot(history.history['binary_accuracy'])
@@ -376,10 +381,6 @@ plt.legend(['train', 'valid'], loc='upper left')
 plt.show()
 
 
-##************************************************** ##
-##                    Evaluation                     ##
-##************************************************** ##
-
 
 prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
@@ -391,30 +392,3 @@ aurprc = auc(recall, precision)
 print(f"The f1_score on the test_set was {f1_test}")
 print(f"The auroc on the test_set was {auroc}")
 print(f"The auprc on the test_set was {aurprc}")
-
-
-##************************************************** ##
-##               Combined Classifier                 ##
-##************************************************** ##
-
-
-# Combined classifier
-prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
-              svc.predict_proba(test_data_numerical.values)[:, 1])/2.0
-y_test_pred = prediction > 0.5
-f1_test = f1_score(test_y.values, y_test_pred)
-fpr, tpr, threshold = roc_curve(test_y.values, prediction)
-precision, recall, _ = precision_recall_curve(test_y.values, prediction)
-auroc = auc(fpr, tpr)
-aurprc = auc(recall, precision)
-print(f"The f1_score on the test_set was {f1_test}")
-print(f"The auroc on the test_set was {auroc}")
-print(f"The auprc on the test_set was {aurprc}")
-
-
-##************************************************** ##
-##                Attention Mechanism                ##
-##************************************************** ##
-
-input_ = keras.Input(shape=(final_max, word_vec_length))
-sequence = keras.layers.LSTM(hidden_layer, return_sequences=True)(input_)
