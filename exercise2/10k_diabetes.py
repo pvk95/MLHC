@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score, roc_curve, auc
+from sklearn.metrics import f1_score, roc_curve, precision_recall_curve, auc
 from sklearn.linear_model import LogisticRegression
 from tensorflow import keras
 from sklearn.svm import SVC
@@ -42,10 +42,11 @@ cat_columns = ['race', 'gender', 'age', 'weight',
 
 
 # All string columns
-str_columns = ['diag_1_desc', 'diag_2_desc', 'diag_3_desc', 'payer_code',
-               'admission_source_id', 'medical_specialty', 'admission_type_id',
-               'discharge_disposition_id'
+str_columns = ['diag_1_desc', 'diag_2_desc', 'diag_3_desc'
                ]
+#               'admission_source_id', 'medical_specialty', 'admission_type_id',
+#               'discharge_disposition_id', 'payer_code'
+#               ]
 
 category_map = {'race': {'AfricanAmerican': 0, 'Caucasian': 1, 'Asian': 2, 'Other': 3, 'Hispanic': 4, '?': np.NaN},
                 'gender': {'Male': 0, 'Female': 1},
@@ -103,8 +104,24 @@ def fix_integers(df, int_columns):
 
 def fix_categories(df, cat_columns, cat_map):
     for column in cat_columns:
+        import pdb
+        pdb.set_trace()
         df[column] = df[column].replace(cat_map[column])
         df[column] = df[column].astype('float64')
+    return df
+
+
+def set_NaN(df, cat_columns, nan_values):
+    nan_map = {key: np.NaN for key in nan_values}
+    for column in cat_columns:
+        df[column] = df[column].replace(nan_map)
+    return df
+
+
+def create_missing_columns(df, unique_columns):
+    for column in unique_columns:
+        if column not in df.columns:
+            df[column] = 0
     return df
 
 
@@ -117,15 +134,35 @@ test_df = fix_integers(test_df, int_columns)
 # category_map = create_maps(train_df, cat_columns, NaN_values)
 # print(category_map)
 
-# Fix Categories
-train_df = fix_categories(train_df, cat_columns, category_map)
-valid_df = fix_categories(valid_df, cat_columns, category_map)
-test_df = fix_categories(test_df, cat_columns, category_map)
+# Set all missing values to NaN
+train_df = set_NaN(train_df, cat_columns, NaN_values)
+valid_df = set_NaN(valid_df, cat_columns, NaN_values)
+test_df = set_NaN(test_df, cat_columns, NaN_values)
 
-# Create data for  later fixing
-train_data_numerical = train_df[cat_columns + int_columns]
-valid_data_numerical = valid_df[cat_columns + int_columns]
-test_data_numerical = test_df[cat_columns + int_columns]
+# Create Dummy Variables for all the categories
+train_cat_dummies = pd.get_dummies(train_df[cat_columns])
+valid_cat_dummies = pd.get_dummies(valid_df[cat_columns])
+test_cat_dummies = pd.get_dummies(test_df[cat_columns])
+
+# Some dummy-variable get excluded because the category doesn't exist in a dataframe.
+# In here we make it so that all 3 dataframes have the same columns
+unique_columns = np.unique(np.concatenate(
+    (train_cat_dummies.columns,
+     valid_cat_dummies.columns,
+     test_cat_dummies.columns)))
+
+
+train_cat_dummies = create_missing_columns(train_cat_dummies, unique_columns)
+valid_cat_dummies = create_missing_columns(valid_cat_dummies, unique_columns)
+test_cat_dummies = create_missing_columns(test_cat_dummies, unique_columns)
+
+# Merge dummy variables and integer variables to one dataframe
+train_data_numerical = pd.concat(
+    [train_cat_dummies, train_df[int_columns]], axis=1)
+valid_data_numerical = pd.concat(
+    [valid_cat_dummies, valid_df[int_columns]], axis=1)
+test_data_numerical = pd.concat(
+    [test_cat_dummies, test_df[int_columns]], axis=1)
 
 # get y_values
 train_y = train_df[pred_columns[0]]
@@ -157,14 +194,14 @@ print(f'The score on the validation set was {score:.3f} - \
 #                Testing SVM                         ##
 ##************************************************** ##
 
-svc = SVC(gamma='scale', class_weight='balanced').fit(
+svc = SVC(gamma='scale', class_weight='balanced', probability=True, kernel='poly').fit(
     train_data_numerical.values,
     train_y.values.ravel())
 score = svc.score(valid_data_numerical.values, valid_y.values.ravel())
 f1 = f1_score(test_y.values, svc.predict(
     test_data_numerical.values))
 print(f'The score on the validation set was {score:.3f} - \
-     the f1_score {f1:.3f}')
+    the f1_score was {f1:.3f}')
 
 
 ##************************************************** ##
@@ -191,6 +228,10 @@ test_data_string = np.apply_along_axis(
 
 # Load Word2Vec model
 # Downloaded from http://bioasq.org/news/bioasq-releases-continuous-space-word-vectors-obtained-applying-word2vec-pubmed-abstracts
+# ! mkdir -p project2_data/word2vec/
+# ! wget -O file.tar.gz  http://bioasq.lip6.fr/tools/BioASQword2vec/
+# ! tar -C project2_data/word2vec -xvf file.tar.gz --strip 1
+# ! rm file.tar.gz
 types_csv = pd.read_csv(
     'project2_data/word2vec/types.txt', header=None, delimiter='\n')
 vectors_csv = pd.read_csv(
@@ -210,11 +251,12 @@ def process_chunk(chunk):
 
             # If the wor isn't found - use "unk"
             if len(idx[0]) == 0:
-                idx = np.where(types_csv == 'unk')
+                #idx = np.where(types_csv == 'unk')
+                continue
 
             word_vec = vectors_csv.iloc[idx[0][0]].values
             sentence_vector.append(word_vec)
-        sentence_vector.append(vectors_csv.iloc[645536].values)
+        # sentence_vector.append(vectors_csv.iloc[645536].values)
         processed_chunk.append(sentence_vector)
     return processed_chunk
 
@@ -225,7 +267,6 @@ def word2vec_parallel(data_string):
     pool = multiprocessing.Pool(cores)
     results = pool.map(process_chunk, chunks)
     results = np.hstack(results)
-    print(results.shape)
     return results
 
 
@@ -236,9 +277,9 @@ def word2vec_parallel(data_string):
 #print('Finished word2vec transformation')
 
 # Save the data
-#np.save('project2_data/word2vec/train_word2vec.npy', train_data_word2vec)
-#np.save('project2_data/word2vec/valid_word2vec.npy', valid_data_word2vec)
-#np.save('project2_data/word2vec/test_word2vec.npy', test_data_word2vec)
+#np.save('project2_data/word2vec/train_word2vec_1.npy', train_data_word2vec)
+#np.save('project2_data/word2vec/valid_word2vec_1.npy', valid_data_word2vec)
+#np.save('project2_data/word2vec/test_word2vec_1.npy', test_data_word2vec)
 
 # Make space in the memory
 del types_csv
@@ -249,9 +290,8 @@ valid_data_word2vec = np.load('project2_data/word2vec/valid_word2vec.npy')
 test_data_word2vec = np.load('project2_data/word2vec/test_word2vec.npy')
 print('Loaded word2vec transformation')
 
+
 # Transform word2vec into floats
-
-
 def transform(array):
     return [[[float(val) for val in word[0].split(" ")] for word in sentence] for sentence in array]
 
@@ -296,7 +336,8 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 20
+epochs = 10
+hidden_layer = 200
 class_weight = {
     0: 0.34,
     1: 0.66
@@ -307,28 +348,20 @@ combined_y = np.hstack([train_y.values, valid_y.values])
 
 
 model = keras.Sequential()
-model.add(keras.layers.LSTM(200, input_shape=(final_max, word_vec_length)))
+model.add(keras.layers.LSTM(hidden_layer,
+                            input_shape=(final_max, word_vec_length)))
+model.add(keras.layers.Dropout(0.5))
+model.add(keras.layers.Dense(100, activation="relu"))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
 model.compile(loss="binary_crossentropy", optimizer="adam",
               metrics=["binary_accuracy"])
 history = model.fit(combined_data, combined_y, validation_split=0.25,
-                    epochs=epochs, batch_size=batch_size,
-                    shuffle=True, class_weight=class_weight, verbose=0)
-
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1)
 
 ##************************************************** ##
 ##                    Evaluation                     ##
 ##************************************************** ##
-
-
-prediction = model.predict(test_data_word2vec)
-y_test_pred = prediction > 0.5
-f1_test = f1_score(test_y.values, y_test_pred)
-fpr, tpr, threshold = roc_curve(test_y.values, prediction)
-auroc = auc(fpr, tpr)
-print(f"The f1_score on the test_set was {f1_test}")
-print(f"The auroc on the test_set was {auroc}")
-
 
 # Plot the accuracy
 plt.plot(history.history['binary_accuracy'])
@@ -339,18 +372,23 @@ plt.xlabel('epoch')
 plt.legend(['train', 'valid'], loc='upper left')
 plt.show()
 
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['train', 'valid'], loc='upper left')
+plt.show()
 
-##************************************************** ##
-##               Combined Classifier                 ##
-##************************************************** ##
 
 
-# Combined classifier
-prediction = ([x[0] for x in model.predict(test_data_word2vec)] +
-              reg.predict_proba(test_data_numerical.values)[:, 1])/2.0
+prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
 fpr, tpr, threshold = roc_curve(test_y.values, prediction)
+precision, recall, _ = precision_recall_curve(test_y.values, prediction)
 auroc = auc(fpr, tpr)
+aurprc = auc(recall, precision)
 print(f"The f1_score on the test_set was {f1_test}")
 print(f"The auroc on the test_set was {auroc}")
+print(f"The auprc on the test_set was {aurprc}")
