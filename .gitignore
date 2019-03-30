@@ -1,3 +1,7 @@
 .ipynb_checkpoints
 exercise_data
+project2_data
+pandas
 __pycache__
+.DS_Store
+.vscode
