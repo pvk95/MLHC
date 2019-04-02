@@ -398,19 +398,21 @@ print(f"The auprc on the test_set was {aurprc}")
 ##                    Attention                      ##
 ##************************************************** ##
 
-hidden_layer = 64
-epochs = 20
+hidden_layer = 32
+epochs = 15
 
 inputs = keras.layers.Input(shape=(final_max, word_vec_length))
-sequences = keras.layers.LSTM(64, return_sequences=True)(inputs)
+sequences = keras.layers.Bidirectional(keras.layers.LSTM(hidden_layer, return_sequences=True))(inputs)
 seq_last = keras.layers.Lambda(lambda x: x[:, -1, :])(sequences)
 # Attention
-attention = keras.layers.Dense(final_max, activation="softmax")(seq_last)
+drop1 = keras.layers.Dropout(0.5)(seq_last)
+dense1 = keras.layers.Dense(128, activation='relu')(drop1)
+attention = keras.layers.Dense(final_max, activation="softmax")(dense1)
 context = keras.layers.dot([attention, sequences], axes=1)
 
 dropout = keras.layers.Dropout(0.5)(context)
-dense1 = keras.layers.Dense(128)(dropout)
-output = keras.layers.Dense(1, activation='sigmoid')(dense1)
+dense2 = keras.layers.Dense(128, activation='relu')(dropout)
+output = keras.layers.Dense(1, activation='sigmoid')(dense2)
 model = keras.models.Model(inputs=inputs, outputs=[output])
 model.compile(
     optimizer='adam',
