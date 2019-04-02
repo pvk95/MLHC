@@ -353,8 +353,11 @@ model.add(keras.layers.LSTM(hidden_layer,
 model.add(keras.layers.Dropout(0.5))
 model.add(keras.layers.Dense(100, activation="relu"))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
-model.compile(loss="binary_crossentropy", optimizer="adam",
-              metrics=["binary_accuracy"])
+model.compile(
+    loss="binary_crossentropy", 
+    optimizer="adam",
+    metrics=["binary_accuracy"]
+    )
 history = model.fit(combined_data, combined_y, validation_split=0.25,
                     epochs=epochs, batch_size=batch_size, class_weight=class_weight,
                     shuffle=True, verbose=1)
@@ -363,22 +366,25 @@ history = model.fit(combined_data, combined_y, validation_split=0.25,
 ##                    Evaluation                     ##
 ##************************************************** ##
 
-# Plot the accuracy
-plt.plot(history.history['binary_accuracy'])
-plt.plot(history.history['val_binary_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
+def plot_history(history):
+    # Plot the accuracy
+    plt.plot(history.history['binary_accuracy'])
+    plt.plot(history.history['val_binary_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
 
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+
+plot_history(history)
 
 
 
@@ -398,20 +404,20 @@ print(f"The auprc on the test_set was {aurprc}")
 ##                    Attention                      ##
 ##************************************************** ##
 
-hidden_layer = 32
-epochs = 15
+hidden_layer = 16
+epochs = 40
 
 inputs = keras.layers.Input(shape=(final_max, word_vec_length))
 sequences = keras.layers.Bidirectional(keras.layers.LSTM(hidden_layer, return_sequences=True))(inputs)
 seq_last = keras.layers.Lambda(lambda x: x[:, -1, :])(sequences)
 # Attention
 drop1 = keras.layers.Dropout(0.5)(seq_last)
-dense1 = keras.layers.Dense(128, activation='relu')(drop1)
+dense1 = keras.layers.Dense(32, activation='relu')(drop1)
 attention = keras.layers.Dense(final_max, activation="softmax")(dense1)
 context = keras.layers.dot([attention, sequences], axes=1)
 
 dropout = keras.layers.Dropout(0.5)(context)
-dense2 = keras.layers.Dense(128, activation='relu')(dropout)
+dense2 = keras.layers.Dense(32, activation='relu')(dropout)
 output = keras.layers.Dense(1, activation='sigmoid')(dense2)
 model = keras.models.Model(inputs=inputs, outputs=[output])
 model.compile(
@@ -424,22 +430,8 @@ history = model.fit(combined_data, combined_y, validation_split=0.25,
                     shuffle=True, verbose=1)
 
 
-# Plot the accuracy
-plt.plot(history.history['binary_accuracy'])
-plt.plot(history.history['val_binary_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
+plot_history(history)
 
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
 prediction = model.predict(test_data_word2vec)
 y_test_pred = prediction > 0.5
 f1_test = f1_score(test_y.values, y_test_pred)
