@@ -1,6 +1,8 @@
 from sklearn.metrics import f1_score, roc_curve, precision_recall_curve, auc
 from sklearn.linear_model import LogisticRegression
 from tensorflow import keras
+import tensorflow_hub as hub
+import tensorflow as tf
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -354,10 +356,10 @@ model.add(keras.layers.Dropout(0.5))
 model.add(keras.layers.Dense(100, activation="relu"))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
 model.compile(
-    loss="binary_crossentropy", 
+    loss="binary_crossentropy",
     optimizer="adam",
     metrics=["binary_accuracy"]
-    )
+)
 history = model.fit(combined_data, combined_y, validation_split=0.25,
                     epochs=epochs, batch_size=batch_size, class_weight=class_weight,
                     shuffle=True, verbose=1)
@@ -365,6 +367,7 @@ history = model.fit(combined_data, combined_y, validation_split=0.25,
 ##************************************************** ##
 ##                    Evaluation                     ##
 ##************************************************** ##
+
 
 def plot_history(history):
     # Plot the accuracy
@@ -384,31 +387,35 @@ def plot_history(history):
     plt.legend(['train', 'valid'], loc='upper left')
     plt.show()
 
-plot_history(history)
+
+def print_scores(model, word2vec, true_values):
+    prediction = model.predict(word2vec)
+    y_test_pred = prediction > 0.5
+    f1_test = f1_score(true_values, y_test_pred)
+    fpr, tpr, threshold = roc_curve(true_values, prediction)
+    precision, recall, _ = precision_recall_curve(true_values, prediction)
+    auroc = auc(fpr, tpr)
+    aurprc = auc(recall, precision)
+    print(f"The f1_score on the test_set was {f1_test}")
+    print(f"The auroc on the test_set was {auroc}")
+    print(f"The auprc on the test_set was {aurprc}")
 
 
-
-prediction = model.predict(test_data_word2vec)
-y_test_pred = prediction > 0.5
-f1_test = f1_score(test_y.values, y_test_pred)
-fpr, tpr, threshold = roc_curve(test_y.values, prediction)
-precision, recall, _ = precision_recall_curve(test_y.values, prediction)
-auroc = auc(fpr, tpr)
-aurprc = auc(recall, precision)
-print(f"The f1_score on the test_set was {f1_test}")
-print(f"The auroc on the test_set was {auroc}")
-print(f"The auprc on the test_set was {aurprc}")
+# plot_history(history)
+print_scores(model, test_data_word2vec, test_y.values)
 
 
 ##************************************************** ##
 ##                    Attention                      ##
 ##************************************************** ##
 
-hidden_layer = 16
-epochs = 40
+hidden_layer = 32
+epochs = 1  # 15
 
 inputs = keras.layers.Input(shape=(final_max, word_vec_length))
-sequences = keras.layers.Bidirectional(keras.layers.LSTM(hidden_layer, return_sequences=True))(inputs)
+sequences = keras.layers.Bidirectional(
+    keras.layers.LSTM(hidden_layer, return_sequences=True))(inputs)
+sequences = keras.layers.LSTM(hidden_layer, return_sequences=True)(sequences)
 seq_last = keras.layers.Lambda(lambda x: x[:, -1, :])(sequences)
 # Attention
 drop1 = keras.layers.Dropout(0.5)(seq_last)
@@ -430,16 +437,96 @@ history = model.fit(combined_data, combined_y, validation_split=0.25,
                     shuffle=True, verbose=1)
 
 
-plot_history(history)
+# plot_history(history)
+print_scores(model, test_data_word2vec, test_y.values)
 
-prediction = model.predict(test_data_word2vec)
-y_test_pred = prediction > 0.5
-f1_test = f1_score(test_y.values, y_test_pred)
-fpr, tpr, threshold = roc_curve(test_y.values, prediction)
-precision, recall, _ = precision_recall_curve(test_y.values, prediction)
-auroc = auc(fpr, tpr)
-aurprc = auc(recall, precision)
-print(f"The f1_score on the test_set was {f1_test}")
-print(f"The auroc on the test_set was {auroc}")
-print(f"The auprc on the test_set was {aurprc}")
 
+##************************************************** ##
+##                 ELMO-Embedding                    ##
+##************************************************** ##
+
+def batch_generator(sentences, y_values):
+    assert(len(sentences) == len(y_values))
+
+    i = 0
+    max_size = len(sentences)
+    while i*batch_size < max_size:
+        sentence_batch = sentences[i*batch_size: (i + 1)*batch_size]
+        y_values_batch = y_values[i*batch_size: (i + 1)*batch_size]
+        yield (sentence_batch, y_values_batch)
+        i += 1
+
+
+batch_size = 64
+epochs = 20
+
+elmo = hub.Module('https://tfhub.dev/google/elmo/2', trainable=False)
+in_string = tf.placeholder(tf.string, shape=(None, 1))
+flat_string = tf.squeeze(in_string, axis=1)
+true_labels = tf.placeholder(tf.float64, shape=(None, 1))
+embedding = elmo(flat_string)
+import pdb; pdb.set_trace()
+dense = tf.layers.Dense(256, activation='relu').apply(embedding)
+output = tf.layers.Dense(1, activation='sigmoid').apply(dense)
+loss = tf.losses.sigmoid_cross_entropy(true_labels, output)
+optimizer = tf.train.AdamOptimizer()
+minimizer = optimizer.minimize(loss)
+
+init = tf.global_variables_initializer()
+with tf.Session() as sess:
+    sess.run(init)
+
+    for epoch in range(epochs):
+        generator = batch_generator(train_data_string, train_y.values)
+        cumulative_loss = 0
+        i = 0
+        for sentence_batch, y_batch, in generator:
+            sentence_batch = np.array([[sentence] for sentence in sentence_batch])
+            y_batch = [[y] for y in y_batch]
+            _, l = sess.run([minimizer, loss],
+                feed_dict={
+                    in_string: sentence_batch,
+                    true_labels: y_batch
+                }
+            )
+            cumulative_loss += l
+            i += 1
+        cumulative_loss /= i
+        
+        generator = batch_generator(valid_data_string, valid_y.values)
+        cumulative_valid_loss = 0
+        cumulative_valid_accuarcy = 0
+        i = 0
+        for sentence_batch, y_batch in generator:
+            sentence_batch = [[sentence] for sentence in sentence_batch]
+            y_batch = [[y] for y in y_batch]
+            out, l = sess.run([output, loss],
+                feed_dict={
+                    in_string: sentence_batch,
+                    true_labels: y_batch
+                }
+            )
+            out = out > 0.5
+            cumulative_valid_accuarcy += sklearn.metrics.accuracy_score(y_batch, out)
+            cumulative_valid_loss += l
+            i += 1
+        cumulative_valid_loss /= i
+        cumulative_valid_accuarcy /= i
+
+        print(f'Epoch: {epoch} loss: {cumulative_loss:.3} valid_loss: {cumulative_valid_loss:.3} valid_accuracy: {cumulative_valid_accuarcy:.3}')
+    
+    generator = batch_generator(test_data_string, test_y.values)
+    predictions = []
+    for sentence_batch, _ in generator:
+        sentence_batch = [[sentence] for sentence in sentence_batch]
+        out = sess.run(output,
+            feed_dict={
+                in_string: sentence_batch,
+            }
+        )
+        predictions.append(out)
+
+    predictions = [x[0] for x in np.concatenate(predictions)]
+    fpr, tpr, _ = roc_curve(test_y.values, predictions)
+    roc_auc = auc(fpr, tpr)
+    print(f'roc_auc: {roc_auc}')
