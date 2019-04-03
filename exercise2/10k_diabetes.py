@@ -338,7 +338,7 @@ print("Transformed everything into numpy array")
 ##************************************************** ##
 
 batch_size = 64
-epochs = 1
+epochs = 8
 hidden_layer = 32
 class_weight = {
     0: 0.34,
@@ -410,7 +410,7 @@ print_scores(model, test_data_word2vec, test_y.values)
 ##************************************************** ##
 
 hidden_layer = 32
-epochs = 1  # 15
+epochs = 15
 
 inputs = keras.layers.Input(shape=(final_max, word_vec_length))
 sequences = keras.layers.Bidirectional(
@@ -443,18 +443,23 @@ print_scores(model, test_data_word2vec, test_y.values)
 
 
 ## Elmo Keras
-epochs = 30
-combined_string = np.vstack([train_data_string, valid_data_string])
+
+epochs = 8
+combined_string = np.hstack([train_data_string, valid_data_string])
 
 elmo = hub.Module('https://tfhub.dev/google/elmo/2', trainable=False)
 keras.backend.get_session().run(tf.global_variables_initializer())
 input_text = keras.layers.Input(shape=(1,), dtype='string')
 embedding = keras.layers.Lambda(lambda x: elmo(keras.backend.squeeze(x, axis=1)))(input_text)
-dense = keras.layers.Dense(256, activation='relu')(embedding)
+drop1 = keras.layers.Dropout(0.5)(embedding)
+dense = keras.layers.Dense(128, activation='relu')(drop1)
 pred = keras.layers.Dense(1, activation='sigmoid')(dense)
 
 model = keras.models.Model(inputs=[input_text], outputs=pred)
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['binary_accuracy'])
 history = model.fit(combined_string, combined_y, validation_split=0.25,
                     epochs=epochs, batch_size=batch_size, class_weight=class_weight,
                     shuffle=True, verbose=1)
+
+plot_history(history)
+print_scores(model, test_data_string, test_y.values)
