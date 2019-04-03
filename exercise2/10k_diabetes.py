@@ -441,92 +441,20 @@ history = model.fit(combined_data, combined_y, validation_split=0.25,
 print_scores(model, test_data_word2vec, test_y.values)
 
 
-##************************************************** ##
-##                 ELMO-Embedding                    ##
-##************************************************** ##
 
-def batch_generator(sentences, y_values):
-    assert(len(sentences) == len(y_values))
-
-    i = 0
-    max_size = len(sentences)
-    while i*batch_size < max_size:
-        sentence_batch = sentences[i*batch_size: (i + 1)*batch_size]
-        y_values_batch = y_values[i*batch_size: (i + 1)*batch_size]
-        yield (sentence_batch, y_values_batch)
-        i += 1
-
-
-batch_size = 64
-epochs = 20
+## Elmo Keras
+epochs = 30
+combined_string = np.vstack([train_data_string, valid_data_string])
 
 elmo = hub.Module('https://tfhub.dev/google/elmo/2', trainable=False)
-in_string = tf.placeholder(tf.string, shape=(None, 1))
-flat_string = tf.squeeze(in_string, axis=1)
-true_labels = tf.placeholder(tf.float64, shape=(None, 1))
-embedding = elmo(flat_string)
-import pdb; pdb.set_trace()
-dense = tf.layers.Dense(256, activation='relu').apply(embedding)
-output = tf.layers.Dense(1, activation='sigmoid').apply(dense)
-loss = tf.losses.sigmoid_cross_entropy(true_labels, output)
-optimizer = tf.train.AdamOptimizer()
-minimizer = optimizer.minimize(loss)
+keras.backend.get_session().run(tf.global_variables_initializer())
+input_text = keras.layers.Input(shape=(1,), dtype='string')
+embedding = keras.layers.Lambda(lambda x: elmo(keras.backend.squeeze(x, axis=1)))(input_text)
+dense = keras.layers.Dense(256, activation='relu')(embedding)
+pred = keras.layers.Dense(1, activation='sigmoid')(dense)
 
-init = tf.global_variables_initializer()
-with tf.Session() as sess:
-    sess.run(init)
-
-    for epoch in range(epochs):
-        generator = batch_generator(train_data_string, train_y.values)
-        cumulative_loss = 0
-        i = 0
-        for sentence_batch, y_batch, in generator:
-            sentence_batch = np.array([[sentence] for sentence in sentence_batch])
-            y_batch = [[y] for y in y_batch]
-            _, l = sess.run([minimizer, loss],
-                feed_dict={
-                    in_string: sentence_batch,
-                    true_labels: y_batch
-                }
-            )
-            cumulative_loss += l
-            i += 1
-        cumulative_loss /= i
-        
-        generator = batch_generator(valid_data_string, valid_y.values)
-        cumulative_valid_loss = 0
-        cumulative_valid_accuarcy = 0
-        i = 0
-        for sentence_batch, y_batch in generator:
-            sentence_batch = [[sentence] for sentence in sentence_batch]
-            y_batch = [[y] for y in y_batch]
-            out, l = sess.run([output, loss],
-                feed_dict={
-                    in_string: sentence_batch,
-                    true_labels: y_batch
-                }
-            )
-            out = out > 0.5
-            cumulative_valid_accuarcy += sklearn.metrics.accuracy_score(y_batch, out)
-            cumulative_valid_loss += l
-            i += 1
-        cumulative_valid_loss /= i
-        cumulative_valid_accuarcy /= i
-
-        print(f'Epoch: {epoch} loss: {cumulative_loss:.3} valid_loss: {cumulative_valid_loss:.3} valid_accuracy: {cumulative_valid_accuarcy:.3}')
-    
-    generator = batch_generator(test_data_string, test_y.values)
-    predictions = []
-    for sentence_batch, _ in generator:
-        sentence_batch = [[sentence] for sentence in sentence_batch]
-        out = sess.run(output,
-            feed_dict={
-                in_string: sentence_batch,
-            }
-        )
-        predictions.append(out)
-
-    predictions = [x[0] for x in np.concatenate(predictions)]
-    fpr, tpr, _ = roc_curve(test_y.values, predictions)
-    roc_auc = auc(fpr, tpr)
-    print(f'roc_auc: {roc_auc}')
+model = keras.models.Model(inputs=[input_text], outputs=pred)
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+history = model.fit(combined_string, combined_y, validation_split=0.25,
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1)
