@@ -337,6 +337,38 @@ print("Transformed everything into numpy array")
 ##                    RNN-Training                   ##
 ##************************************************** ##
 
+
+class Metrics(keras.callbacks.Callback):
+    def __init__(self, valid_data, **kwargs):
+        self.valid_data = valid_data
+        super().__init__()
+
+    def on_train_begin(self, logs={}):
+        self.metrics = {
+            'val_f1': [],
+            'val_roc_auc': [],
+            'val_prc_auc': [],
+        }
+
+    def on_epoch_end(self, epoch, logs={}):
+        val_prob = np.asarray(self.model.predict(self.valid_data[0]))
+        val_predict = (val_prob).round()
+        val_targ = self.valid_data[1]
+        _val_f1 = f1_score(val_targ, val_predict)
+        fpr, tpr, _ = roc_curve(val_targ, val_prob)
+        _val_roc_auc = auc(fpr, tpr)
+        precision, recall, _ = precision_recall_curve(val_targ, val_predict)
+        _val_prc_auc = auc(recall, precision)
+        self.metrics['val_f1'].append(_val_f1)
+        self.metrics['val_roc_auc'].append(_val_roc_auc)
+        self.metrics['val_prc_auc'].append(_val_prc_auc)
+        print(f' - val_f1: {_val_f1:.3} - val_rocauc: {_val_roc_auc:.3} - val_prcauc:{_val_prc_auc:.3}')
+        return
+
+
+metrics = Metrics((valid_data_word2vec, valid_y.values))
+
+
 batch_size = 64
 epochs = 8
 hidden_layer = 32
@@ -344,9 +376,6 @@ class_weight = {
     0: 0.34,
     1: 0.66
 }
-
-combined_data = np.vstack([train_data_word2vec, valid_data_word2vec])
-combined_y = np.hstack([train_y.values, valid_y.values])
 
 
 model = keras.Sequential()
@@ -360,14 +389,24 @@ model.compile(
     optimizer="adam",
     metrics=["binary_accuracy"]
 )
-history = model.fit(combined_data, combined_y, validation_split=0.25,
+history = model.fit(train_data_word2vec, train_y.values, validation_data=(valid_data_word2vec, valid_y.values),
                     epochs=epochs, batch_size=batch_size, class_weight=class_weight,
-                    shuffle=True, verbose=1)
+                    shuffle=True, verbose=1, callbacks=[metrics])
 
 ##************************************************** ##
 ##                    Evaluation                     ##
 ##************************************************** ##
 
+
+def plot_metrics(metrics):
+    plt.plot(metrics.metrics['val_f1'])
+    plt.plot(metrics.metrics['val_roc_auc'])
+    plt.plot(metrics.metrics['val_prc_auc'])
+    plt.title('metrics')
+    plt.ylabel('score')
+    plt.xlabel('epoch')
+    plt.legend(['f1', 'roc-auc', 'prc-auc'], loc='upper left')
+    plt.show()
 
 def plot_history(history):
     # Plot the accuracy
@@ -401,6 +440,7 @@ def print_scores(model, word2vec, true_values):
     print(f"The auprc on the test_set was {aurprc}")
 
 
+plot_metrics(metrics)
 # plot_history(history)
 print_scores(model, test_data_word2vec, test_y.values)
 
@@ -432,10 +472,10 @@ model.compile(
     loss='binary_crossentropy',
     metrics=['binary_accuracy']
 )
-history = model.fit(combined_data, combined_y, validation_split=0.25,
-                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
-                    shuffle=True, verbose=1)
 
+history = model.fit(train_data_word2vec, train_y.values, validation_data=(valid_data_word2vec, valid_y.values),
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1, callbacks=[metrics])
 
 # plot_history(history)
 print_scores(model, test_data_word2vec, test_y.values)
