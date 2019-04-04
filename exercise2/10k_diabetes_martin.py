@@ -1,6 +1,8 @@
 from sklearn.metrics import f1_score, roc_curve, precision_recall_curve, auc
 from sklearn.linear_model import LogisticRegression
 from tensorflow import keras
+import tensorflow_hub as hub
+import tensorflow as tf
 from sklearn.svm import SVC
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -335,16 +337,45 @@ print("Transformed everything into numpy array")
 ##                    RNN-Training                   ##
 ##************************************************** ##
 
+
+class Metrics(keras.callbacks.Callback):
+    def __init__(self, valid_data, **kwargs):
+        self.valid_data = valid_data
+        super().__init__()
+
+    def on_train_begin(self, logs={}):
+        self.metrics = {
+            'val_f1': [],
+            'val_roc_auc': [],
+            'val_prc_auc': [],
+        }
+
+    def on_epoch_end(self, epoch, logs={}):
+        val_prob = np.asarray(self.model.predict(self.valid_data[0]))
+        val_predict = (val_prob).round()
+        val_targ = self.valid_data[1]
+        _val_f1 = f1_score(val_targ, val_predict)
+        fpr, tpr, _ = roc_curve(val_targ, val_prob)
+        _val_roc_auc = auc(fpr, tpr)
+        precision, recall, _ = precision_recall_curve(val_targ, val_predict)
+        _val_prc_auc = auc(recall, precision)
+        self.metrics['val_f1'].append(_val_f1)
+        self.metrics['val_roc_auc'].append(_val_roc_auc)
+        self.metrics['val_prc_auc'].append(_val_prc_auc)
+        print(f' - val_f1: {_val_f1:.3} - val_rocauc: {_val_roc_auc:.3} - val_prcauc:{_val_prc_auc:.3}')
+        return
+
+
+metrics = Metrics((valid_data_word2vec, valid_y.values))
+
+
 batch_size = 64
-epochs = 10
-hidden_layer = 200
+epochs = 8
+hidden_layer = 32
 class_weight = {
     0: 0.34,
     1: 0.66
 }
-
-combined_data = np.vstack([train_data_word2vec, valid_data_word2vec])
-combined_y = np.hstack([train_y.values, valid_y.values])
 
 
 model = keras.Sequential()
@@ -353,42 +384,122 @@ model.add(keras.layers.LSTM(hidden_layer,
 model.add(keras.layers.Dropout(0.5))
 model.add(keras.layers.Dense(100, activation="relu"))
 model.add(keras.layers.Dense(1, activation="sigmoid"))
-model.compile(loss="binary_crossentropy", optimizer="adam",
-              metrics=["binary_accuracy"])
-history = model.fit(combined_data, combined_y, validation_split=0.25,
+model.compile(
+    loss="binary_crossentropy",
+    optimizer="adam",
+    metrics=["binary_accuracy"]
+)
+history = model.fit(train_data_word2vec, train_y.values, validation_data=(valid_data_word2vec, valid_y.values),
                     epochs=epochs, batch_size=batch_size, class_weight=class_weight,
-                    shuffle=True, verbose=1)
+                    shuffle=True, verbose=1, callbacks=[metrics])
 
 ##************************************************** ##
 ##                    Evaluation                     ##
 ##************************************************** ##
 
-# Plot the accuracy
-plt.plot(history.history['binary_accuracy'])
-plt.plot(history.history['val_binary_accuracy'])
-plt.title('model accuracy')
-plt.ylabel('accuracy')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
 
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
-plt.xlabel('epoch')
-plt.legend(['train', 'valid'], loc='upper left')
-plt.show()
+def plot_metrics(metrics):
+    plt.plot(metrics.metrics['val_f1'])
+    plt.plot(metrics.metrics['val_roc_auc'])
+    plt.plot(metrics.metrics['val_prc_auc'])
+    plt.title('metrics')
+    plt.ylabel('score')
+    plt.xlabel('epoch')
+    plt.legend(['f1', 'roc-auc', 'prc-auc'], loc='upper left')
+    plt.show()
+
+def plot_history(history):
+    # Plot the accuracy
+    plt.plot(history.history['binary_accuracy'])
+    plt.plot(history.history['val_binary_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'valid'], loc='upper left')
+    plt.show()
+
+
+def print_scores(model, word2vec, true_values):
+    prediction = model.predict(word2vec)
+    y_test_pred = prediction > 0.5
+    f1_test = f1_score(true_values, y_test_pred)
+    fpr, tpr, threshold = roc_curve(true_values, prediction)
+    precision, recall, _ = precision_recall_curve(true_values, prediction)
+    auroc = auc(fpr, tpr)
+    aurprc = auc(recall, precision)
+    print(f"The f1_score on the test_set was {f1_test}")
+    print(f"The auroc on the test_set was {auroc}")
+    print(f"The auprc on the test_set was {aurprc}")
+
+
+plot_metrics(metrics)
+# plot_history(history)
+print_scores(model, test_data_word2vec, test_y.values)
+
+
+##************************************************** ##
+##                    Attention                      ##
+##************************************************** ##
+
+hidden_layer = 32
+epochs = 15
+
+inputs = keras.layers.Input(shape=(final_max, word_vec_length))
+sequences = keras.layers.Bidirectional(
+    keras.layers.LSTM(hidden_layer, return_sequences=True))(inputs)
+sequences = keras.layers.LSTM(hidden_layer, return_sequences=True)(sequences)
+seq_last = keras.layers.Lambda(lambda x: x[:, -1, :])(sequences)
+# Attention
+drop1 = keras.layers.Dropout(0.5)(seq_last)
+dense1 = keras.layers.Dense(32, activation='relu')(drop1)
+attention = keras.layers.Dense(final_max, activation="softmax")(dense1)
+context = keras.layers.dot([attention, sequences], axes=1)
+
+dropout = keras.layers.Dropout(0.5)(context)
+dense2 = keras.layers.Dense(32, activation='relu')(dropout)
+output = keras.layers.Dense(1, activation='sigmoid')(dense2)
+model = keras.models.Model(inputs=inputs, outputs=[output])
+model.compile(
+    optimizer='adam',
+    loss='binary_crossentropy',
+    metrics=['binary_accuracy']
+)
+
+history = model.fit(train_data_word2vec, train_y.values, validation_data=(valid_data_word2vec, valid_y.values),
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1, callbacks=[metrics])
+
+# plot_history(history)
+print_scores(model, test_data_word2vec, test_y.values)
 
 
 
-prediction = model.predict(test_data_word2vec)
-y_test_pred = prediction > 0.5
-f1_test = f1_score(test_y.values, y_test_pred)
-fpr, tpr, threshold = roc_curve(test_y.values, prediction)
-precision, recall, _ = precision_recall_curve(test_y.values, prediction)
-auroc = auc(fpr, tpr)
-aurprc = auc(recall, precision)
-print(f"The f1_score on the test_set was {f1_test}")
-print(f"The auroc on the test_set was {auroc}")
-print(f"The auprc on the test_set was {aurprc}")
+## Elmo Keras
+
+epochs = 8
+combined_string = np.hstack([train_data_string, valid_data_string])
+
+elmo = hub.Module('https://tfhub.dev/google/elmo/2', trainable=False)
+keras.backend.get_session().run(tf.global_variables_initializer())
+input_text = keras.layers.Input(shape=(1,), dtype='string')
+embedding = keras.layers.Lambda(lambda x: elmo(keras.backend.squeeze(x, axis=1)))(input_text)
+drop1 = keras.layers.Dropout(0.5)(embedding)
+dense = keras.layers.Dense(128, activation='relu')(drop1)
+pred = keras.layers.Dense(1, activation='sigmoid')(dense)
+
+model = keras.models.Model(inputs=[input_text], outputs=pred)
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['binary_accuracy'])
+history = model.fit(combined_string, combined_y, validation_split=0.25,
+                    epochs=epochs, batch_size=batch_size, class_weight=class_weight,
+                    shuffle=True, verbose=1)
+
+plot_history(history)
+print_scores(model, test_data_string, test_y.values)
