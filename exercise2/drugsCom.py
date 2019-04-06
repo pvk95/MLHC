@@ -152,7 +152,6 @@ np.save('project2_data/glove/test_idxs.npy', test_idxs)
 
 #train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
 #test_idxs = np.load('project2_data/glove/test_idxs.npy')
-import pdb; pdb.set_trace()
 
 
 glove_vectors = glove_embeddings.iloc[:, 1:].values
