@@ -144,15 +144,20 @@ def comments_to_idxs(comments):
     results = np.vstack(results)
     return results
 
-train_idxs = comments_to_idxs(df_train_1.review.values)
-test_idxs = comments_to_idxs(df_test.review.values)
+#train_idxs = comments_to_idxs(df_train_1.review.values)
+#test_idxs = comments_to_idxs(df_test.review.values)
 
-np.save('project2_data/glove/train_idxs.npy', train_idxs)
-np.save('project2_data/glove/test_idxs.npy', test_idxs)
+#np.save('project2_data/glove/train_idxs.npy', train_idxs)
+#np.save('project2_data/glove/test_idxs.npy', test_idxs)
 
-#train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
-#test_idxs = np.load('project2_data/glove/test_idxs.npy')
+train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
+test_idxs = np.load('project2_data/glove/test_idxs.npy')
 
+max_seq_length = 100
+train_idxs_1 = train_idxs_1[:,:max_seq_length]
+test_idxs = test_idxs[:,:max_seq_length]
+
+train_idx, valid_idx, train_y, valid_y = train_test_split(train_idxs_1, df_train_1.rating.values)
 
 glove_vectors = glove_embeddings.iloc[:, 1:].values
 M1 = np.zeros((vocab_size + 1, vector_length + 1))
@@ -160,41 +165,10 @@ M1[:-1, :-1] = glove_vectors
 glove_vectors = M1
 glove_vectors[-1, -1] = 1
 
-
-def batch_generator(comments, target, batch_size):
-    assert(len(comments) == len(target))
-    length = len(comments)
-    i = 0
-    while i*batch_size < length:
-        batch_comments = comments[i*batch_size: (i + 1)*batch_size]
-        batch_y = target[i*batch_size: (i+1) * batch_size]
-        batch_idxs = []
-        for comment in batch_comments:
-            idxs = []
-            for word in comment.split(' '):
-                word = word.strip('"\n\r')
-                if word == '':
-                    continue
-                try:
-                    idx = glove_word[glove_word == word].index[0]
-                except IndexError:
-                    idx = vocab_size
-                idxs.append(idx)
-            batch_idxs.append(idxs)
-        batch_idxs = keras.preprocessing.sequence.pad_sequences(
-            batch_idxs, 
-            max_seq_length,
-            padding='post', 
-            truncating='post',
-            value=0
-            )
-        yield (batch_idxs, batch_y)
-        i += 1
-
-
 ##
 batch_size = 64
 hidden_units = 128
+epochs = 30
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
 embedding_sequence = keras.layers.Embedding(
@@ -209,13 +183,14 @@ out = keras.layers.Dense(1, activation='sigmoid')(lstm)
 model = keras.models.Model(inputs=sequence_input, outputs=out)
 model.compile(
     optimizer='adam',
-    loss='mean_squared_error'
+    loss='mean_squared_error',
+    epochs=epochs
 )
 train_scaled_ratings = df_train.rating.values / 10
 valid_scaled_ratings = df_valid.rating.values / 10
 steps_per_epoch = np.int64(np.ceil(len(df_train.review.values) / batch_size))
-model.fit_generator(
-    batch_generator(df_train.review.values, train_scaled_ratings, batch_size),
-    steps_per_epoch=steps_per_epoch,
-    validation_data=(df_valid.review.values, valid_scaled_ratings)
+model.fit(
+    x = train_idx,
+    y = train_y/10,
+    validation_data=(valid_idx, valid_y/10)
 )
