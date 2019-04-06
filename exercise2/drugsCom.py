@@ -11,7 +11,7 @@ df_train_1 = pd.read_csv(
     './project2_data/drugsCom_raw/drugsComTrain_raw.tsv', delimiter='\t', encoding='utf-8')
 df_test = pd.read_csv(
     './project2_data/drugsCom_raw/drugsComTest_raw.tsv', delimiter='\t', encoding='utf-8')
-df_train, df_valid = train_test_split(df_train1)
+df_train, df_valid = train_test_split(df_train_1)
 
 # Some Drug-Names appear multiple time in a non-unique fashion.
 # e.g. "Stalevo", "Stalevo 200"
@@ -80,8 +80,9 @@ print(f'Accuracy: {accuracy_score(valid_true_labels, valid_pred_labels):.3} - f1
 # ! wget http://nlp.stanford.edu/data/glove.twitter.27B.zip
 # ! mkdir -p project2_data/glove
 # ! unzip -d project2_data/glove/ glove.twitter.27B.zip
-vocab_size = 50000
+vocab_size = 10000
 vector_length = 200
+max_seq_length = 500
 glove_embeddings = pd.read_csv('project2_data/glove/glove.twitter.27B.200d.txt',
                                header=None, delimiter=' ', encoding='utf-8', quoting=csv.QUOTE_NONE)
 print('Loaded glove embeddings')
@@ -93,21 +94,42 @@ glove_word = glove_embeddings[0]
 
 def process_chunk(comments):
     processed_comments = []
+    lookup = {}
     for comment in comments: 
         idxs = []
-        for word in comment: 
-            word = word.strip('"\n\r')
+
+        comment = comment.replace('&#39;', "'")
+        comment = comment.replace('\n' ' ')
+        comment = comment.replace('\r' ' ')
+        comment = comment.replace('&amp;' ' and ')
+        comment = comment.replace('&quot;' ' ')
+
+        for i, word in enumerate(comment.split(' ')): 
+            # if the comment is longer than the max-seq-length break the  loop
+            if i > max_seq_length:
+                break
+        
+            # put everything into lowercase
+            word = word.lower()
+
+            # if empty word skip 
             if word == '':
                 continue
-            try:
-                idx = glove_word[glove_word == word].index[0]
-            except IndexError:
-                idx = vocab_size
+            # if word is in our lookup table
+            if word in lookup.keys():
+                idx = lookup[word]
+            else:
+                try:
+                    idx = glove_word[glove_word == word].index[0]
+                except IndexError:
+                    idx = vocab_size
+                # put word into lookup table
+                lookup[word] = idx
             idxs.append(idx)
         processed_comments.append(idxs)
     processed_comments = keras.preprocessing.sequence.pad_sequences(
         processed_comments,
-        maxlen=500,
+        maxlen=max_seq_length,
         padding='post', 
         truncating='post',
         value=0
@@ -123,14 +145,14 @@ def comments_to_idxs(comments):
     return results
 
 train_idxs = comments_to_idxs(df_train_1.review.values)
-test_idxs = comments_to_idxs(df_test.reveiwe)
+test_idxs = comments_to_idxs(df_test.review.values)
 
 np.save('project2_data/glove/train_idxs.npy', train_idxs)
 np.save('project2_data/glove/test_idxs.npy', test_idxs)
 
+#train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
+#test_idxs = np.load('project2_data/glove/test_idxs.npy')
 import pdb; pdb.set_trace()
-
-
 
 
 glove_vectors = glove_embeddings.iloc[:, 1:].values
@@ -173,7 +195,6 @@ def batch_generator(comments, target, batch_size):
 
 ##
 batch_size = 64
-max_seq_length = 500
 hidden_units = 128
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
