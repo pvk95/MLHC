@@ -99,10 +99,10 @@ def process_chunk(comments):
         idxs = []
 
         comment = comment.replace('&#39;', "'")
-        comment = comment.replace('\n' ' ')
-        comment = comment.replace('\r' ' ')
-        comment = comment.replace('&amp;' ' and ')
-        comment = comment.replace('&quot;' ' ')
+        comment = comment.replace('\n', ' ')
+        comment = comment.replace('\r', ' ')
+        comment = comment.replace('&amp;', ' and ')
+        comment = comment.replace('&quot;', ' ')
 
         for i, word in enumerate(comment.split(' ')): 
             # if the comment is longer than the max-seq-length break the  loop
