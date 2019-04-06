@@ -167,7 +167,7 @@ glove_vectors[-1, -1] = 1
 
 ##
 batch_size = 64
-hidden_units = 128
+hidden_units = 256
 epochs = 30
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
@@ -179,12 +179,13 @@ embedding_sequence = keras.layers.Embedding(
     trainable=False
 )(sequence_input)
 lstm = keras.layers.LSTM(hidden_units)(embedding_sequence)
-out = keras.layers.Dense(1, activation='sigmoid')(lstm)
+drop = keras.layers.Dropout(0.5)(lstm)
+dense = keras.layers.Dense(128)(drop)
+out = keras.layers.Dense(1, activation='sigmoid')(dense)
 model = keras.models.Model(inputs=sequence_input, outputs=out)
 model.compile(
     optimizer='adam',
     loss='mean_squared_error',
-    epochs=epochs
 )
 train_scaled_ratings = df_train.rating.values / 10
 valid_scaled_ratings = df_valid.rating.values / 10
@@ -192,5 +193,7 @@ steps_per_epoch = np.int64(np.ceil(len(df_train.review.values) / batch_size))
 model.fit(
     x = train_idx,
     y = train_y/10,
-    validation_data=(valid_idx, valid_y/10)
+    validation_data=(valid_idx, valid_y/10),
+    epochs=epochs
 )
+model.save('model.h5')
