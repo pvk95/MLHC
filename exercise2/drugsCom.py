@@ -81,9 +81,9 @@ print(f'Accuracy: {accuracy_score(valid_true_labels, valid_pred_labels):.3} - f1
 # ! mkdir -p project2_data/glove
 # ! unzip -d project2_data/glove/ glove.twitter.27B.zip
 vocab_size = 10000
-vector_length = 200
+vector_length = 25
 max_seq_length = 500
-glove_embeddings = pd.read_csv('project2_data/glove/glove.twitter.27B.200d.txt',
+glove_embeddings = pd.read_csv('project2_data/glove/glove.twitter.27B.25d.txt',
                                header=None, delimiter=' ', encoding='utf-8', quoting=csv.QUOTE_NONE)
 print('Loaded glove embeddings')
 glove_embeddings = glove_embeddings[:vocab_size]
@@ -153,7 +153,7 @@ def comments_to_idxs(comments):
 train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
 test_idxs = np.load('project2_data/glove/test_idxs.npy')
 
-max_seq_length = 100
+max_seq_length = 50
 train_idxs_1 = train_idxs_1[:,:max_seq_length]
 test_idxs = test_idxs[:,:max_seq_length]
 
@@ -178,7 +178,8 @@ embedding_sequence = keras.layers.Embedding(
     input_length=max_seq_length,
     trainable=False
 )(sequence_input)
-lstm = keras.layers.LSTM(hidden_units)(embedding_sequence)
+
+lstm = keras.layers.Bidirectional(keras.layers.LSTM(hidden_units))(embedding_sequence)
 drop = keras.layers.Dropout(0.5)(lstm)
 dense = keras.layers.Dense(128)(drop)
 out = keras.layers.Dense(1, activation='sigmoid')(dense)
