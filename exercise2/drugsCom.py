@@ -11,7 +11,7 @@ df_train_1 = pd.read_csv(
     './project2_data/drugsCom_raw/drugsComTrain_raw.tsv', delimiter='\t', encoding='utf-8')
 df_test = pd.read_csv(
     './project2_data/drugsCom_raw/drugsComTest_raw.tsv', delimiter='\t', encoding='utf-8')
-df_train, df_valid = train_test_split(df_train_1)
+df_train, df_valid = train_test_split(df_train_1, random_state=42)
 
 # Some Drug-Names appear multiple time in a non-unique fashion.
 # e.g. "Stalevo", "Stalevo 200"
@@ -173,7 +173,7 @@ valid_y_cat = pd.get_dummies(to_labels(valid_y)).values
 
 batch_size = 64
 hidden_units = 256
-epochs =  0 #20
+epochs =  20
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
 embedding_sequence = keras.layers.Embedding(
@@ -202,43 +202,4 @@ model.fit(
     validation_data=(valid_idx, valid_y_cat),
     epochs=epochs
 )
-#model.save('model_cat.h5')
-
-
-## Attention LSTM
-
-batch_size = 64
-hidden_units = 256
-epochs =  20
-
-sequence_input = keras.layers.Input(shape=(max_seq_length,))
-embedding_sequence = keras.layers.Embedding(
-    vocab_size + 1,
-    vector_length + 1,
-    weights=[glove_vectors],
-    input_length=max_seq_length,
-    trainable=False
-)(sequence_input)
-
-lstm_seq = keras.layers.Bidirectional(keras.layers.LSTM(hidden_units, return_sequences=True))(embedding_sequence)
-lstm_last = keras.layers.Lambda(lambda x: x[:, -1, :])(lstm_seq)
-
-attention = keras.layers.Dense(max_seq_length)(lstm_last)
-context = keras.layers.dot([attention, lstm_seq], axes=1)
-
-drop = keras.layers.Dropout(0.5)(context)
-dense = keras.layers.Dense(128)(drop)
-out = keras.layers.Dense(3, activation='softmax')(dense)
-model = keras.models.Model(inputs=sequence_input, outputs=out)
-model.compile(
-    optimizer='adam',
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
-model.fit(
-    x = train_idx,
-    y = train_y_cat,
-    validation_data=(valid_idx, valid_y_cat),
-    epochs=epochs
-)
-model.save('model_fit.h5')
+model.save('model_cat.h5')
