@@ -90,6 +90,12 @@ glove_embeddings = glove_embeddings[:vocab_size]
 
 glove_word = glove_embeddings[0]
 
+glove_vectors = glove_embeddings.iloc[:, 1:].values
+M1 = np.zeros((vocab_size + 1, vector_length + 1))
+M1[:-1, :-1] = glove_vectors
+glove_vectors = M1
+glove_vectors[-1, -1] = 1
+
 
 
 def process_chunk(comments):
@@ -157,18 +163,17 @@ max_seq_length = 50
 train_idxs_1 = train_idxs_1[:,:max_seq_length]
 test_idxs = test_idxs[:,:max_seq_length]
 
-train_idx, valid_idx, train_y, valid_y = train_test_split(train_idxs_1, df_train_1.rating.values)
+train_idx, valid_idx, train_y, valid_y = train_test_split(train_idxs_1, df_train_1.rating.values, random_state=42)
+train_y_cat = pd.get_dummies(to_labels(train_y)).values
+valid_y_cat = pd.get_dummies(to_labels(valid_y)).values
 
-glove_vectors = glove_embeddings.iloc[:, 1:].values
-M1 = np.zeros((vocab_size + 1, vector_length + 1))
-M1[:-1, :-1] = glove_vectors
-glove_vectors = M1
-glove_vectors[-1, -1] = 1
 
-##
+
+## Bidiretional LSTM
+
 batch_size = 64
 hidden_units = 256
-epochs = 20
+epochs =  0 #20
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
 embedding_sequence = keras.layers.Embedding(
@@ -189,8 +194,6 @@ model.compile(
     loss='categorical_crossentropy',
     metrics=['accuracy']
 )
-train_y_cat = pd.get_dummies(to_labels(train_y)).values
-valid_y_cat = pd.get_dummies(to_labels(valid_y)).values
 
 
 model.fit(
@@ -199,4 +202,43 @@ model.fit(
     validation_data=(valid_idx, valid_y_cat),
     epochs=epochs
 )
-model.save('model_cat.h5')
+#model.save('model_cat.h5')
+
+
+## Attention LSTM
+
+batch_size = 64
+hidden_units = 256
+epochs =  20
+
+sequence_input = keras.layers.Input(shape=(max_seq_length,))
+embedding_sequence = keras.layers.Embedding(
+    vocab_size + 1,
+    vector_length + 1,
+    weights=[glove_vectors],
+    input_length=max_seq_length,
+    trainable=False
+)(sequence_input)
+
+lstm_seq = keras.layers.Bidirectional(keras.layers.LSTM(hidden_units, return_sequences=True))(embedding_sequence)
+lstm_last = keras.layers.Lambda(lambda x: x[:, -1, :])(lstm_seq)
+
+attention = keras.layers.Dense(max_seq_length)(lstm_last)
+context = keras.layers.dot([attention, lstm_seq], axes=1)
+
+drop = keras.layers.Dropout(0.5)(context)
+dense = keras.layers.Dense(128)(drop)
+out = keras.layers.Dense(3, activation='softmax')(dense)
+model = keras.models.Model(inputs=sequence_input, outputs=out)
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+model.fit(
+    x = train_idx,
+    y = train_y_cat,
+    validation_data=(valid_idx, valid_y_cat),
+    epochs=epochs
+)
+model.save('model_fit.h5')
