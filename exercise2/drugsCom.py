@@ -211,4 +211,15 @@ model = keras.models.load_model('model_cat.h5')
 print('loaded model')
 
 lstm_predictions = model.predict(valid_idx)
-print(roc_auc_score(valid_y_cat, lstm_predictions))
+print(f'ROC AUC {roc_auc_score(valid_y_cat, lstm_predictions):.3}  Acc: {accuracy_score(np.argmax(valid_y_cat, axis=1), np.argmax(lstm_predictions, axis=1)):.3} ')
+
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+
+combined = np.hstack([pd.get_dummies(to_labels(valid_ratings)).values, lstm_predictions])
+
+train_combined, valid_combined, train_cat, valid_cat = train_test_split(combined, np.argmax(valid_y_cat, axis=1))
+
+clf = SVC()
+clf.fit(train_combined, train_cat)
+print(clf.score(valid_combined, valid_cat))
