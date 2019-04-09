@@ -1,3 +1,4 @@
+from sklearn.metrics import roc_auc_score
 from tensorflow import keras
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, mean_squared_error
@@ -97,11 +98,10 @@ glove_vectors = M1
 glove_vectors[-1, -1] = 1
 
 
-
 def process_chunk(comments):
     processed_comments = []
     lookup = {}
-    for comment in comments: 
+    for comment in comments:
         idxs = []
 
         comment = comment.replace('&#39;', "'")
@@ -110,15 +110,15 @@ def process_chunk(comments):
         comment = comment.replace('&amp;', ' and ')
         comment = comment.replace('&quot;', ' ')
 
-        for i, word in enumerate(comment.split(' ')): 
+        for i, word in enumerate(comment.split(' ')):
             # if the comment is longer than the max-seq-length break the  loop
             if i > max_seq_length:
                 break
-        
+
             # put everything into lowercase
             word = word.lower()
 
-            # if empty word skip 
+            # if empty word skip
             if word == '':
                 continue
             # if word is in our lookup table
@@ -136,11 +136,12 @@ def process_chunk(comments):
     processed_comments = keras.preprocessing.sequence.pad_sequences(
         processed_comments,
         maxlen=max_seq_length,
-        padding='post', 
+        padding='post',
         truncating='post',
         value=0
-        )
+    )
     return processed_comments
+
 
 def comments_to_idxs(comments):
     cores = mp.cpu_count()
@@ -156,24 +157,25 @@ def comments_to_idxs(comments):
 #np.save('project2_data/glove/train_idxs.npy', train_idxs)
 #np.save('project2_data/glove/test_idxs.npy', test_idxs)
 
+
 train_idxs_1 = np.load('project2_data/glove/train_idxs.npy')
 test_idxs = np.load('project2_data/glove/test_idxs.npy')
 
 max_seq_length = 50
-train_idxs_1 = train_idxs_1[:,:max_seq_length]
-test_idxs = test_idxs[:,:max_seq_length]
+train_idxs_1 = train_idxs_1[:, :max_seq_length]
+test_idxs = test_idxs[:, :max_seq_length]
 
-train_idx, valid_idx, train_y, valid_y = train_test_split(train_idxs_1, df_train_1.rating.values, random_state=42)
+train_idx, valid_idx, train_y, valid_y = train_test_split(
+    train_idxs_1, df_train_1.rating.values, random_state=42)
 train_y_cat = pd.get_dummies(to_labels(train_y)).values
 valid_y_cat = pd.get_dummies(to_labels(valid_y)).values
 
 
-
-## Bidiretional LSTM
+# Bidiretional LSTM
 
 batch_size = 64
 hidden_units = 256
-epochs =  20
+epochs = 20
 
 sequence_input = keras.layers.Input(shape=(max_seq_length,))
 embedding_sequence = keras.layers.Embedding(
@@ -184,7 +186,8 @@ embedding_sequence = keras.layers.Embedding(
     trainable=False
 )(sequence_input)
 
-lstm = keras.layers.Bidirectional(keras.layers.LSTM(hidden_units))(embedding_sequence)
+lstm = keras.layers.Bidirectional(
+    keras.layers.LSTM(hidden_units))(embedding_sequence)
 drop = keras.layers.Dropout(0.5)(lstm)
 dense = keras.layers.Dense(128)(drop)
 out = keras.layers.Dense(3, activation='softmax')(dense)
@@ -195,11 +198,17 @@ model.compile(
     metrics=['accuracy']
 )
 
+# model.fit(
+#   x = train_idx,
+#   y = train_y_cat,
+#   validation_data=(valid_idx, valid_y_cat),
+#   epochs=epochs
+#
+# model.save('model_cat.h5')
 
-model.fit(
-    x = train_idx,
-    y = train_y_cat,
-    validation_data=(valid_idx, valid_y_cat),
-    epochs=epochs
-)
-model.save('model_cat.h5')
+
+model = keras.models.load_model('model_cat.h5')
+print('loaded model')
+
+lstm_predictions = model.predict(valid_idx)
+print(roc_auc_score(valid_y_cat, lstm_predictions))
