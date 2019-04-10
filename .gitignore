@@ -5,3 +5,6 @@ settings.json
 __pycache__
 *.h5
 *.zip
+pandas
+.DS_Store
+.vscode
