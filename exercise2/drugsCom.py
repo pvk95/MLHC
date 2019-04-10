@@ -210,8 +210,9 @@ model.compile(
 model = keras.models.load_model('model_cat.h5')
 print('loaded model')
 
-lstm_predictions = model.predict(valid_idx)
-print(f'ROC AUC {roc_auc_score(valid_y_cat, lstm_predictions):.3}  Acc: {accuracy_score(np.argmax(valid_y_cat, axis=1), np.argmax(lstm_predictions, axis=1)):.3} ')
+lstm_predictions = model.predict(test_idxs)
+test_y_cat = pd.get_dummies(to_labels(df_test.rating)).values
+print(f'ROC AUC {roc_auc_score(test_y_cat, lstm_predictions):.3}  Acc: {accuracy_score(np.argmax(test_y_cat, axis=1), np.argmax(lstm_predictions, axis=1)):.3} ')
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
