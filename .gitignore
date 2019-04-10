@@ -5,3 +5,5 @@ pandas
 __pycache__
 .DS_Store
 .vscode
+*.zip
+*.h5
