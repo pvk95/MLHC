@@ -3,3 +3,5 @@ exercise_data
 project2_data
 settings.json
 __pycache__
+*.h5
+*.zip
