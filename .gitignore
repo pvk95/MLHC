@@ -1,7 +1,10 @@
 .ipynb_checkpoints
 exercise_data
 project2_data
-pandas
+settings.json
 __pycache__
+*.h5
+*.zip
+pandas
 .DS_Store
 .vscode
