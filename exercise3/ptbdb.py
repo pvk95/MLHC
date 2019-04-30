@@ -16,10 +16,10 @@ df = pd.concat([df_1, df_2])
 df_train, df_test = train_test_split(df, test_size=0.2, random_state=1337, stratify=df[187])
 
 Y = np.array(df_train[187].values).astype(np.int8)
-X = np.array(df_train[list(range(187))].values)[..., np.newaxis]
+X = np.array(df_train[list(range(186))].values)[..., np.newaxis]
 
 Y_test = np.array(df_test[187].values).astype(np.int8)
-X_test = np.array(df_test[list(range(187))].values)[..., np.newaxis]
+X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
