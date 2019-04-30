@@ -3,15 +3,25 @@ from tensorflow.keras import activations, models, optimizers, losses
 from .model import Model
 
 class Residual_CNN(Model):
-    def __init__(self, name='Model', input_shape=(186, 1), outputs=1, epochs=1000, summary=False):
-        super().__init__(name, input_shape, outputs, epochs, summary)
+    def __init__(self, name='Model', input_shape=(186, 1), outputs=1, epochs=1000, summary=False, deepness=5, verbose=1):
+        super().__init__(name, input_shape, outputs, epochs, summary, verbose)
         self.model = self.getModel()
+        self.deepness = deepness
+    
+    def get_params(self, deep=True):
+        return {
+            'deepness': self.deepness
+        }
+    
+    def fit(self, X, y):
+        self.model = self.getModel()
+        return super().fit(X, y)
     
     def getModel(self):
         inp = Input(self.input_shape)
         res = Convolution1D(32, kernel_size=5, activation=activations.linear)(inp)
 
-        for _ in range(5):
+        for _ in range(4):
             res = self.residual_block(res)
 
         flatten = Flatten()(res)
@@ -23,7 +33,7 @@ class Residual_CNN(Model):
             output = Dense(self.outputs, activation='softmax')(dense1)
 
         model = models.Model(inputs=inp, outputs=output)
-        opt = optimizers.Adam(0.001)
+        opt = optimizers.Adam(0.01)
 
         model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
         if self.summary:

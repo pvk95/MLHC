@@ -3,7 +3,7 @@ import os
 import sys
 import models
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 gpu = 0
 lstm_out = 100
@@ -24,13 +24,33 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
 models_ = [
-    models.Residual_CNN('residual'),
+    models.Residual_CNN('residual', verbose=0),
     models.CNN_Model('baseline'),
     models.LSTM_Model('LSTM', epochs=1)
 ]
 
-for model in models_:
-    model.train(X, Y, f'{model.name}_ptbdb.h5')
+params = [
+    {
+        'deepness': range(4,6),
+        'verbose': [0]
+    },
+    {   
+        'conv1_size': [16, 32],
+        'conv2_size': [32, 64],
+        'conv3_size': [128, 256],
+        'dense_size': [16, 32, 64],
+        'verbose': [0]
+    },
+    {
+        'verbose': [0]
+    }
+]
+
+for param, model in zip(params, models_):
+    clf = GridSearchCV(model, param, cv=2, n_jobs=1)
+    clf.fit(X, Y)
+    model = clf.best_estimator_
     metrics_df = model.getScores(X_test, Y_test, metrics_df)
+    print(metrics_df)
 
 print(metrics_df)

@@ -3,26 +3,38 @@ from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score, ac
 import numpy as np
 
 class Model(object):
-    def __init__(self, name, input_shape, outputs, epochs, summary):
+    def __init__(self, name, input_shape, outputs, epochs, summary, verbose):
         self.name = name
         self.input_shape = input_shape
         self.outputs = outputs
         self.epochs = epochs
         self.summary = summary
+        self.verbose = verbose
         self.model = None
 
-    def train(self, X, Y, file_path):
-        checkpoint = ModelCheckpoint(file_path, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
-        early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=1)
-        redonplat = ReduceLROnPlateau(monitor="val_acc", mode="max", patience=3, verbose=2)
-        callbacks_list = [checkpoint, early, redonplat]  # early
-
-        self.model.fit(X, Y, epochs=self.epochs, verbose=1, callbacks=callbacks_list, validation_split=0.1)
-        self.model.load_weights(file_path)
+    def set_params(self, **parameters):
+        for parameter, value in parameters.items():
+            setattr(self, parameter, value)
         return self
 
+    def predict(self, X):
+        return self.model.predict(X)
+
+    def fit(self, X, Y):
+        checkpoint = ModelCheckpoint(self.name + '.h5', monitor='val_acc', verbose=self.verbose, save_best_only=True, mode='max')
+        early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
+        redonplat = ReduceLROnPlateau(monitor="val_acc", mode="max", patience=3, verbose=self.verbose)
+        callbacks_list = [checkpoint, early, redonplat]  # early
+
+        self.model.fit(X, Y, epochs=self.epochs, verbose=self.verbose, callbacks=callbacks_list, validation_split=0.1)
+        #self.model.load_weights(self.name + '.h5')
+        return self
+    
+    def score(self, X, Y):
+        return self.model.evaluate(X,Y)[1]
+
     def getScores(self, X_test, Y_test, metrics_df):
-        pred_test = self.model.predict(X_test)
+        pred_test = self.predict(X_test)
         fpr, tpr, _ = roc_curve(Y_test, pred_test)
         auroc = auc(fpr, tpr)
         precision, recall, _ = precision_recall_curve(Y_test, pred_test)
