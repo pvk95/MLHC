@@ -3,7 +3,7 @@ import os
 import sys
 import models
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 
 gpu = 0
 lstm_out = 100
@@ -47,7 +47,7 @@ params = [
 ]
 
 for param, model in zip(params, models_):
-    clf = GridSearchCV(model, param, cv=2, n_jobs=1)
+    clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1)
     clf.fit(X, Y)
     model = clf.best_estimator_
     metrics_df = model.getScores(X_test, Y_test, metrics_df)
