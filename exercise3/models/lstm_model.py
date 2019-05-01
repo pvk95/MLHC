@@ -26,11 +26,20 @@ class LSTM_Model(Model):
         #lstm = LSTM(self.hidden)(inp)
         dense_1 = Dense(self.dense, activation=activations.relu)(lstm)
         dense_1 = Dense(self.dense, activation=activations.relu)(dense_1)
-        dense_1 = Dense(self.outputs, activation=activations.sigmoid)(dense_1)
+
+        if self.outputs == 1:
+            dense_1 = Dense(self.outputs, activation=activations.sigmoid)(dense_1)
+        else:
+            dense_1 = Dense(self.outputs, activation=activations.softmax)(dense_1)
+
         model = models.Model(inputs=inp, outputs=dense_1)
         opt = optimizers.Adam(0.001)
 
-        model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        if self.outputs == 1:
+            model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        else:
+            model.compile(optimizer=opt, loss=losses.categorical_crossentropy, metrics=['acc'])
+
         if self.summary:
             model.summary()
         return model
