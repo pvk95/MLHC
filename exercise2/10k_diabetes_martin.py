@@ -370,7 +370,7 @@ metrics = Metrics((valid_data_word2vec, valid_y.values))
 
 
 batch_size = 64
-epochs = 8
+epochs = 20
 hidden_layer = 32
 class_weight = {
     0: 0.34,
@@ -486,6 +486,7 @@ print_scores(model, test_data_word2vec, test_y.values)
 
 epochs = 8
 combined_string = np.hstack([train_data_string, valid_data_string])
+combined_y = np.hstack([train_y, valid_y])
 
 elmo = hub.Module('https://tfhub.dev/google/elmo/2', trainable=False)
 keras.backend.get_session().run(tf.global_variables_initializer())
