@@ -4,6 +4,7 @@ import sys
 import models
 import types
 import numpy as np
+import keras
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
@@ -11,25 +12,31 @@ gpu = 0
 lstm_out = 100
 os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 
-df_1 = pd.read_csv("exercise_data/heartbeat/ptbdb_normal.csv", header=None)
-df_2 = pd.read_csv("exercise_data/heartbeat/ptbdb_abnormal.csv", header=None)
+df_1 = pd.read_csv("exercise_data/heartbeat/mitbih_train.csv", header=None)
+df_2 = pd.read_csv("exercise_data/heartbeat/mitbih_test.csv", header=None)
 df = pd.concat([df_1, df_2])
 
 df_train, df_test = train_test_split(df, test_size=0.2, random_state=1337, stratify=df[187])
 
+# 87556 samples
 Y = np.array(df_train[187].values).astype(np.int8)
+Y = keras.utils.to_categorical(Y)
+np.shape(Y)
 X = np.array(df_train[list(range(186))].values)[..., np.newaxis]
 
+# 21890 samples
 Y_test = np.array(df_test[187].values).astype(np.int8)
+Y_test = keras.utils.to_categorical(Y_test)
+np.shape(Y_test)
 X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
 models_ = [
-    models.LSTM_Model(),
+    models.LSTM_Model(outputs=5),
     RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN(),
-    models.CNN_Model(),
+    models.Residual_CNN(outputs=5),
+    models.CNN_Model(outputs=5),
 ]
 
 params = [
@@ -41,7 +48,7 @@ params = [
     },
     # RandomForestClassifier
     {
-        'n_estimators' : [10, 100, 200],
+        'n_estimators': [10, 100, 200],
         'n_jobs':  [-1]
     },
     # Residual_CNN
