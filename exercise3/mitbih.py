@@ -64,7 +64,7 @@ params = [
 ]
 
 for param, model in zip(params, models_):
-    clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1, n_iter=5, verbose=3)
+    clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1, n_iter=5, verbose=2)
     if type(model) == RandomForestClassifier:
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
