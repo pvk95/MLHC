@@ -34,7 +34,7 @@ def visualize(df,title):
     plt.suptitle(title)
     #plt.show()
 
-gpu = 7
+gpu = 0
 lstm_out = 100
 os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -63,10 +63,10 @@ metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','AC
 models_ = [
     sklearn.mixture.GaussianMixture(n_components=2),
     sklearn.mixture.BayesianGaussianMixture(n_components=2),
-    models.LSTM_Model(),
+    models.LSTM_Model(verbose=0),
     RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN(),
-    models.CNN_Model(),
+    models.Residual_CNN(verbose=0),
+    models.CNN_Model(verbose=0),
 ]
 
 params = [
@@ -80,7 +80,7 @@ params = [
     },
     # LSTM
     {
-        'hidden': [16, 32, 64],
+        'hidden': [64],
         'dense': [16, 32, 64]
     },
     # RandomForestClassifier
@@ -104,7 +104,7 @@ params = [
 
 model_preds = []
 for param, model in zip(params, models_):
-    clf = RandomizedSearchCV(model, param, cv=2,n_iter=5)
+    clf = RandomizedSearchCV(model, param, cv=2, n_iter=5, verbose=2)
     if type(model) == RandomForestClassifier or \
         type(model) == sklearn.mixture.GaussianMixture or \
         type(model) == sklearn.mixture.BayesianGaussianMixture:
