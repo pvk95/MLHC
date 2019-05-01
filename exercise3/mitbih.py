@@ -53,7 +53,7 @@ def visualize(df,title):
     #plt.show()
 
 
-gpu = 7
+gpu = 0
 lstm_out = 100
 os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
