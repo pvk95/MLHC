@@ -8,7 +8,7 @@ from tensorflow import keras
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 import sklearn.mixture
-from sklearn.metrics import roc_curve,precision_recall_curve,auc,accuracy_score,f1_score
+from sklearn.metrics import roc_curve,precision_recall_curve,auc,accuracy_score,f1_score, roc_auc_score
 import matplotlib.pyplot as plt
 
 def getScores(model_name,Y_test,pred_test,metrics_df):
@@ -115,7 +115,7 @@ model_preds = np.squeeze(model_preds)
 
 #Avg ensemble:
 avg_pred = np.mean(model_preds,axis=0)
-metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df)
+metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df, multilabel=True)
 
 #Logistic regression
 from sklearn.linear_model import LogisticRegression
