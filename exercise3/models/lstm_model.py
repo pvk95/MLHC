@@ -14,16 +14,10 @@ class LSTM_Model(Model):
         self.model = self.getModel()
         return super().fit(X, y)
     
-    def get_params(self, deep=True):
-        return {
-            'hidden': self.hidden,
-            'dense': self.dense
-        }
-    
     def getModel(self):
         inp = Input(shape=self.input_shape)
-        lstm = Bidirectional(CuDNNLSTM(self.hidden))(inp)
-        #lstm = LSTM(self.hidden)(inp)
+        #lstm = Bidirectional(CuDNNLSTM(self.hidden))(inp)
+        lstm = LSTM(self.hidden)(inp)
         dense_1 = Dense(self.dense, activation=activations.relu)(lstm)
         dense_1 = Dense(self.dense, activation=activations.relu)(dense_1)
 

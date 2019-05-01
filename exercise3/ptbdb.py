@@ -60,30 +60,9 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
-
-gmm = sklearn.mixture.GaussianMixture(n_components=2)
-gmm.fit(np.squeeze(X),Y)
-gmm_pred = gmm.predict_proba(np.squeeze(X_test))[:,0]
-
-v_gmm = sklearn.mixture.BayesianGaussianMixture(n_components=2)
-v_gmm.fit(np.squeeze(X),Y)
-v_gmm_pred = v_gmm.predict_proba(np.squeeze(X_test))[:,0]
-
-metrics_df = getScores("GMM",Y_test,gmm_pred,metrics_df)
-metrics_df = getScores("Bayesian GMM",Y_test,v_gmm_pred,metrics_df)
-
-'''
-# RandomForestClassifier
-if type(model) == RandomForestClassifier:
-    clf.fit(np.squeeze(X_ft), Y)
-    model = clf.best_estimator_
-    #model.getScores = types.MethodType(models.CNN_Model.getScores, model)
-    metrics_df = getScores(model,np.squeeze(X_test_ft), Y_test, metrics_df)
-'''
-
-RandomForestClassifier.getScores = models.CNN_Model.getScores
-
 models_ = [
+    sklearn.mixture.GaussianMixture(n_components=2),
+    sklearn.mixture.BayesianGaussianMixture(n_components=2),
     models.LSTM_Model(),
     RandomForestClassifier(n_jobs=-1),
     models.Residual_CNN(),
@@ -91,9 +70,16 @@ models_ = [
 ]
 
 params = [
+    # Gaussian mixture
+    {
+
+    },
+    # Bayesian Mixture
+    {
+
+    },
     # LSTM
     {
-        'verbose': [0],
         'hidden': [16, 32, 64],
         'dense': [16, 32, 64]
     },
@@ -105,7 +91,6 @@ params = [
     # Residual_CNN
     {
         'deepness': range(1,6),
-        'verbose': [0]
     },
     # CNN_Model
     {   
@@ -113,7 +98,6 @@ params = [
         'conv2_size': [32, 64],
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
-        'verbose': [0]
     },
     
 ]
@@ -121,16 +105,16 @@ params = [
 model_preds = []
 for param, model in zip(params, models_):
     clf = RandomizedSearchCV(model, param, cv=2,n_iter=5)
-    if type(model) == RandomForestClassifier:
+    if type(model) == RandomForestClassifier or \
+        type(model) == sklearn.mixture.GaussianMixture or \
+        type(model) == sklearn.mixture.BayesianGaussianMixture:
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
-        #model.fit(np.squeeze(X),Y)
         model.getScores = types.MethodType(models.CNN_Model.getScores, model)
         _,metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
     else:
         clf.fit(X, Y)
         model = clf.best_estimator_
-        #model.fit(X,Y)
         pred,metrics_df = model.getScores(X_test, Y_test, metrics_df)
         model_preds.append(pred)
     print(metrics_df)
@@ -151,5 +135,3 @@ lg_pred = lg.predict_proba(X_lg)[:,0]
 metrics_df = getScores('Ensemble(LG)',Y_test=Y_test,pred_test=lg_pred,metrics_df=metrics_df)
 
 print(metrics_df)
-
-
