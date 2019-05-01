@@ -20,8 +20,8 @@ Y_binary = to_categorical(Y)
 
 # Train model and save it
 rnn_model = models.LSTM_Model(outputs=5)
-#rnn_model.fit(X, Y_binary)
-#rnn_model.model.save('transfer_learning.h5')
+rnn_model.fit(X, Y_binary)
+rnn_model.model.save('transfer_learning.h5')
 
 # load ptbdb data
 ptbdb_1 = pd.read_csv("exercise_data/heartbeat/ptbdb_normal.csv", header=None)
@@ -81,5 +81,3 @@ for x in range(4):
 model2.compile(optimizer=Adam(0.001), loss='binary_crossentropy', metrics=['acc'])
 model2.summary()
 model2.fit(X_train, Y_train, epochs=1000, verbose=1, callbacks=callbacks_list, validation_data=(X_test, Y_test))
-
-
