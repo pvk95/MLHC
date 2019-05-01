@@ -32,6 +32,7 @@ models_ = [
 params = [
     {
         'deepness': range(4,6),
+        'name': ['residual'],
         'verbose': [0]
     },
     {   
@@ -39,9 +40,11 @@ params = [
         'conv2_size': [32, 64],
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
+        'name': ['baseline'],
         'verbose': [0]
     },
     {
+        'name': ['LSTM'],
         'verbose': [0]
     }
 ]
