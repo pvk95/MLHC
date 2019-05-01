@@ -17,14 +17,6 @@ class CNN_Model(Model):
         self.model = self.getModel()
         return super().fit(X, y)
     
-    def get_params(self, deep=True):
-        return {
-            'conv1_size': self.conv1_size,
-            'conv2_size': self.conv2_size,
-            'conv3_size': self.conv3_size,
-            'dense_size': self.dense_size
-        }
-    
     def getModel(self):
         inp = Input(shape=self.input_shape)
         img_1 = Convolution1D(self.conv1_size, kernel_size=5, activation=activations.relu, padding="valid")(inp)

@@ -16,6 +16,12 @@ class Model(object):
             setattr(self, parameter, value)
         return self
 
+    def get_params(self, deep=True):
+        d = vars(self)
+        d = dict(d)
+        d.pop('model')
+        return d
+
     def predict(self, X):
         return self.model.predict(X)
 

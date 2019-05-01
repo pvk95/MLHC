@@ -8,10 +8,15 @@ class Residual_CNN(Model):
         self.model = self.getModel()
         self.deepness = deepness
     
+    '''
     def get_params(self, deep=True):
         return {
-            'deepness': self.deepness
+            'deepness': self.deepness,
+            'outputs': self.outputs,
+            'epochs': self.epochs,
+            'verbose': self.verbose
         }
+    '''
     
     def fit(self, X, y):
         self.model = self.getModel()

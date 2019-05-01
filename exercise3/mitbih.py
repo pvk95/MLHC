@@ -33,30 +33,16 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
 models_ = [
-    models.LSTM_Model(outputs=5),
+    models.Residual_CNN(outputs=5, verbose=0, epochs=10),
+    models.CNN_Model(outputs=5, verbose=0, epochs=10),
+    models.LSTM_Model(outputs=5, verbose=0, epochs=15),
     RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN(outputs=5),
-    models.CNN_Model(outputs=5),
 ]
 
 params = [
-    # LSTM
-    {
-        'verbose': [1],
-        'hidden': [16, 32, 64],
-        'dense': [16, 32, 64],
-        'outputs':[5]
-    },
-    # RandomForestClassifier
-    {
-        'n_estimators': [10, 100, 200],
-        'n_jobs':  [-1]
-    },
     # Residual_CNN
     {
         'deepness': range(1,6),
-        'verbose': [0],
-        'outputs':[5]
     },
     # CNN_Model
     {   
@@ -64,14 +50,21 @@ params = [
         'conv2_size': [32, 64],
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
-        'verbose': [0],
-        'outputs':[5]
     },
-    
+     # LSTM
+    {
+        'hidden': [16, 32, 64],
+        'dense': [16, 32, 64],
+    },
+    # RandomForestClassifier
+    {
+        'n_estimators': [10, 100, 200],
+        'n_jobs':  [-1]
+    },
 ]
 
 for param, model in zip(params, models_):
-    clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1)
+    clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1, n_iter=5, verbose=3)
     if type(model) == RandomForestClassifier:
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
