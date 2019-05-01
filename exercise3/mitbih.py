@@ -57,15 +57,18 @@ metrics_df = pd.DataFrame(data=[],columns=['Name','ACC'])
 
 models_ = [
     #sklearn.mixture.BayesianGaussianMixture(n_components=5),
-    RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN(outputs=5),
-    models.CNN_Model(outputs=5),
     sklearn.mixture.GaussianMixture(n_components=5),
+    RandomForestClassifier(n_jobs=-1),
+    models.Residual_CNN(outputs=5, epochs=15),
+    models.CNN_Model(outputs=5, epochs=15),
     models.LSTM_Model(outputs=5, epochs=15),
 ]
 
 params = [
-    
+    #GMM
+    {
+
+    },
     # RandomForestClassifier
     {
         'n_estimators': [10, 100, 200],
@@ -82,11 +85,7 @@ params = [
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
     },
-    #GMM
-    {
-
-    },
-    # LSTM
+        # LSTM
     {
         'hidden': [64],
         'dense': [64],
