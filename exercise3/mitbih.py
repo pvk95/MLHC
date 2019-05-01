@@ -8,19 +8,35 @@ from tensorflow import keras
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 import sklearn.mixture
-from sklearn.metrics import roc_curve,precision_recall_curve,auc,accuracy_score,f1_score
+from sklearn.metrics import roc_curve,precision_recall_curve,auc,accuracy_score,f1_score, roc_auc_score
 import matplotlib.pyplot as plt
 
-def getScores(model_name,Y_test,pred_test,metrics_df):
-    fpr, tpr, _ = roc_curve(Y_test, pred_test)
-    auroc = auc(fpr, tpr)
-    precision, recall, _ = precision_recall_curve(Y_test, pred_test)
-    auprc = auc(recall, precision)
+def getScores(model_name,Y_test,pred_test,metrics_df, multilabel=False):
+    if multilabel:
+        pred_test = keras.utils.to_categorical(pred_test)
+
+    # compute average roc_auc_score
+    auroc = roc_auc_score(Y_test, pred_test)
+
+    # skip precsion recall in multilabel-case
+    if multilabel:
+        auprc = 0
+    else:
+        precision, recall, _ = precision_recall_curve(Y_test, pred_test)
+        auprc = auc(recall, precision)
+
     pred_test = (pred_test > 0.5).astype(np.int8)
-    f1 = f1_score(Y_test, pred_test)
+
+    # compute f1_score
+    if multilabel:
+        f1 = f1_score(Y_test, pred_test, average='micro')
+    else:
+        f1 = f1_score(Y_test, pred_test)
+
+    # comput accuracy
     acc = accuracy_score(Y_test, pred_test)
-    curr_metrics = {'Name': model_name, 'f1_score': f1, "AUROC": auroc, "AUPRC": auprc, "ACC": acc}
-    metrics_df = metrics_df.append(curr_metrics, ignore_index=True)
+    curr_metrics = {'Name':model_name,'f1_score': f1, "AUROC": auroc, "AUPRC": auprc, "ACC": acc}
+    metrics_df = metrics_df.append(curr_metrics, ignore_index = True)
     return metrics_df
 
 def visualize(df,title):
@@ -116,7 +132,7 @@ for param, model in zip(params, models_):
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
         model.getScores = types.MethodType(models.CNN_Model.getScores, model)
-        _,metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
+        _,metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df, multilabel=True)
     else:
         clf.fit(X, Y)
         model = clf.best_estimator_
@@ -129,7 +145,7 @@ model_preds = np.squeeze(model_preds)
 
 #Avg ensemble:
 avg_pred = np.mean(model_preds,axis=0)
-metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df)
+metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df, multilabel=True)
 
 ## MF: not applicable for multi-class
 # #Logistic regression
@@ -140,4 +156,4 @@ metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_
 # lg_pred = lg.predict_proba(X_lg)[:,0]
 # metrics_df = getScores('Ensemble(LG)',Y_test=Y_test,pred_test=lg_pred,metrics_df=metrics_df)
 #
-# print(metrics_df)
+print(metrics_df)

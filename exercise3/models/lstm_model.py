@@ -16,8 +16,8 @@ class LSTM_Model(Model):
     
     def getModel(self):
         inp = Input(shape=self.input_shape)
-        #lstm = Bidirectional(CuDNNLSTM(self.hidden))(inp)
-        lstm = LSTM(self.hidden)(inp)
+        lstm = Bidirectional(CuDNNLSTM(self.hidden))(inp)
+        #lstm = Bidirectional(LSTM(self.hidden))(inp)
         dense_1 = Dense(self.dense, activation=activations.relu)(lstm)
         dense_1 = Dense(self.dense, activation=activations.relu)(dense_1)
 

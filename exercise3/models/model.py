@@ -1,5 +1,6 @@
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score, accuracy_score
+from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score, accuracy_score, roc_auc_score
 import numpy as np
 
 class Model(object):
@@ -39,19 +40,36 @@ class Model(object):
     def score(self, X, Y):
         return self.model.evaluate(X,Y)[1]
 
-    def getScores(self, X_test, Y_test, metrics_df):
+    def getScores(self, X_test, Y_test, metrics_df, multilabel=False):
         pred_test = np.squeeze(self.predict(X_test))
         pred = pred_test.copy()
-        fpr, tpr, _ = roc_curve(Y_test, pred_test)
-        auroc = auc(fpr, tpr)
-        precision, recall, _ = precision_recall_curve(Y_test, pred_test)
-        auprc = auc(recall, precision)
+
+        if multilabel:
+           pred_test = to_categorical(pred_test)
+
+        # compute average roc_auc_score
+        auroc = roc_auc_score(Y_test, pred_test)
+
+        # skip precsion recall in multilabel-case
+        if multilabel:
+            auprc = 0
+        else:
+            precision, recall, _ = precision_recall_curve(Y_test, pred_test)
+            auprc = auc(recall, precision)
+
         pred_test = (pred_test > 0.5).astype(np.int8)
-        f1 = f1_score(Y_test, pred_test)
+
+        # compute f1_score
+        if multilabel:
+            f1 = f1_score(Y_test, pred_test, average='micro')
+        else:
+            f1 = f1_score(Y_test, pred_test)
+
+        # comput accuracy
         acc = accuracy_score(Y_test, pred_test)
         curr_metrics = {'Name':type(self).__name__,'f1_score': f1, "AUROC": auroc, "AUPRC": auprc, "ACC": acc}
-        metrics_df = metrics_df.append(curr_metrics,ignore_index = True)
-        return pred,metrics_df
+        metrics_df = metrics_df.append(curr_metrics, ignore_index = True)
+        return pred, metrics_df
 
 
 
