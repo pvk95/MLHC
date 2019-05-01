@@ -35,7 +35,11 @@ class Residual_CNN(Model):
         model = models.Model(inputs=inp, outputs=output)
         opt = optimizers.Adam(0.01)
 
-        model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        if self.outputs == 1:
+            model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        else:
+            model.compile(optimizer=opt, loss=losses.categorical_crossentropy, metrics=['acc'])
+
         if self.summary:
             model.summary()
         return model
