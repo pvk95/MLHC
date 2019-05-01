@@ -1,6 +1,7 @@
 from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score, accuracy_score
 import numpy as np
+import sklearn.mixture
 
 class Model(object):
     def __init__(self, input_shape, outputs, epochs, summary, verbose):
@@ -53,7 +54,21 @@ class Model(object):
         metrics_df = metrics_df.append(curr_metrics,ignore_index = True)
         return pred,metrics_df
 
+    def getScores_multi(self, X_test, Y_test, metrics_df):
+        if type(self) == sklearn.mixture.GaussianMixture or \
+            type(self) == sklearn.mixture.BayesianGaussianMixture or \
+            type(self) == sklearn.ensemble.RandomForestClassifier:
+            pred_test = self.predict_proba(X_test)
+        else:
+            pred_test = (self.predict(X_test))
 
+        pred = pred_test.copy()
+        Y_test_temp = np.argmax(Y_test, axis=-1)
+        pred_test_temp = np.argmax(pred_test,axis=-1)
+        acc = accuracy_score(Y_test_temp, pred_test_temp)
+        curr_metrics = {'Name':type(self).__name__,"ACC": acc}
+        metrics_df = metrics_df.append(curr_metrics,ignore_index = True)
+        return pred,metrics_df
 
 '''
 Boilerplate for a new class
