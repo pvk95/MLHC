@@ -32,7 +32,7 @@ def visualize(df,title):
     plt.suptitle(title)
     #plt.show()
 
-gpu = 7
+gpu = 0
 lstm_out = 100
 os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -57,20 +57,15 @@ metrics_df = pd.DataFrame(data=[],columns=['Name','ACC'])
 
 models_ = [
     #sklearn.mixture.BayesianGaussianMixture(n_components=5),
-    models.LSTM_Model(outputs=5),
     RandomForestClassifier(n_jobs=-1),
     models.Residual_CNN(outputs=5),
     models.CNN_Model(outputs=5),
-    sklearn.mixture.GaussianMixture(n_components=5)
+    sklearn.mixture.GaussianMixture(n_components=5),
+    models.LSTM_Model(outputs=5, epochs=15),
 ]
 
 params = [
-    # LSTM
-    {
-        'hidden': [16, 32, 64],
-        'dense': [16, 32, 64],
-        'verbose': [1]
-    },
+    
     # RandomForestClassifier
     {
         'n_estimators': [10, 100, 200],
@@ -90,24 +85,28 @@ params = [
     #GMM
     {
 
-    }
-
+    },
+    # LSTM
+    {
+        'hidden': [64],
+        'dense': [64],
+    },
 ]
 
 model_preds = []
 for param, model in zip(params, models_):
-    clf = RandomizedSearchCV(model, param, cv=2,n_iter=3)
+    clf = RandomizedSearchCV(model, param, cv=2,n_iter=3, verbose=2)
     if type(model) == RandomForestClassifier or \
         type(model) == sklearn.mixture.GaussianMixture or \
         type(model) == sklearn.mixture.BayesianGaussianMixture:
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
         model.getScores = types.MethodType(models.CNN_Model.getScores_multi, model)
-        _,metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
+        _, metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
     else:
         clf.fit(X, Y)
         model = clf.best_estimator_
-        pred,metrics_df = model.getScores_multi(X_test, Y_test, metrics_df)
+        pred, metrics_df = model.getScores_multi(X_test, Y_test, metrics_df)
         model_preds.append(pred)
     print(metrics_df)
 
