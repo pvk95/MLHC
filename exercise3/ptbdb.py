@@ -29,9 +29,9 @@ RandomForestClassifier.getScores = models.CNN_Model.getScores
 
 models_ = [
     RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN('residual', verbose=0),
-    models.CNN_Model('baseline'),
-    models.LSTM_Model('LSTM', epochs=1)
+    models.Residual_CNN(verbose=0),
+    models.CNN_Model(),
+    models.LSTM_Model(epochs=1)
 ]
 
 params = [
@@ -40,7 +40,6 @@ params = [
     },
     {
         'deepness': range(4,6),
-        'name': ['residual'],
         'verbose': [0]
     },
     {   
@@ -48,11 +47,9 @@ params = [
         'conv2_size': [32, 64],
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
-        'name': ['baseline'],
         'verbose': [0]
     },
     {
-        'name': ['LSTM'],
         'verbose': [0]
     }
 ]
@@ -62,7 +59,6 @@ for param, model in zip(params, models_):
     if type(model) == RandomForestClassifier:
         clf.fit(np.squeeze(X), Y)
         model = clf.best_estimator_
-        model.name = "RandomForestClassifier"
         model.getScores = types.MethodType(models.CNN_Model.getScores, model)
         metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
     else:

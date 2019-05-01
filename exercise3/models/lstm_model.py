@@ -4,8 +4,8 @@ from .model import Model
 
 
 class LSTM_Model(Model):
-    def __init__(self, name='Model', input_shape=(186, 1), outputs=1, epochs=1000, summary=False, verbose=1):
-        super().__init__(name, input_shape, outputs, epochs, summary, verbose)
+    def __init__(self, input_shape=(186, 1), outputs=1, epochs=1000, summary=False, verbose=1):
+        super().__init__(input_shape, outputs, epochs, summary, verbose)
         self.model = self.getModel()
     
     def fit(self, X, y):

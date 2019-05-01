@@ -4,9 +4,9 @@ from .model import Model
 
 
 class CNN_Model(Model):
-    def __init__(self, name='Model', input_shape=(186, 1), outputs=1, epochs=1000, summary=False, verbose=1, 
+    def __init__(self, input_shape=(186, 1), outputs=1, epochs=1000, summary=False, verbose=1, 
                 conv1_size=16, conv2_size=32, conv3_size=256, dense_size=64):
-        super().__init__(name, input_shape, outputs, epochs, summary, verbose)
+        super().__init__(input_shape, outputs, epochs, summary, verbose)
         self.conv1_size = conv1_size
         self.conv2_size = conv2_size
         self.conv3_size = conv3_size
