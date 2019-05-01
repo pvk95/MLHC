@@ -131,7 +131,7 @@ from sklearn.linear_model import LogisticRegression
 lg = LogisticRegression(n_jobs=-1)
 X_lg = np.transpose(model_preds,[1,0])
 lg.fit(X_lg,Y_test)
-lg_pred = lg.predict_proba(X_lg)[:,0]
+lg_pred = lg.predict_proba(X_lg)[:,1]
 metrics_df = getScores('Ensemble(LG)',Y_test=Y_test,pred_test=lg_pred,metrics_df=metrics_df)
 
 print(metrics_df)
