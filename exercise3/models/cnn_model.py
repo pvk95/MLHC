@@ -46,12 +46,19 @@ class CNN_Model(Model):
 
         dense_1 = Dense(self.dense_size, activation=activations.relu, name="dense_1")(img_1)
         dense_1 = Dense(self.dense_size, activation=activations.relu, name="dense_2")(dense_1)
-        dense_1 = Dense(self.outputs, activation=activations.sigmoid, name="dense_3_ptbdb")(dense_1)
+        if self.outputs == 1: 
+            dense_1 = Dense(self.outputs, activation=activations.sigmoid, name="dense_3_ptbdb")(dense_1)
+        else: 
+            dense_1 = Dense(self.outputs, activation=activations.softmax , name="dense_3_ptbdb")(dense_1)
 
         model = models.Model(inputs=inp, outputs=dense_1)
         opt = optimizers.Adam(0.001)
 
-        model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        if self.outputs == 1: 
+            model.compile(optimizer=opt, loss=losses.binary_crossentropy, metrics=['acc'])
+        else: 
+            model.compile(optimizer=opt, loss=losses.categorical_crossentropy , metrics=['acc'])
+        
         if self.summary:
             model.summary()
         return model

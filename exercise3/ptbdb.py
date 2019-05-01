@@ -60,6 +60,7 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
+
 gmm = sklearn.mixture.GaussianMixture(n_components=2)
 gmm.fit(np.squeeze(X),Y)
 gmm_pred = gmm.predict_proba(np.squeeze(X_test))[:,0]
