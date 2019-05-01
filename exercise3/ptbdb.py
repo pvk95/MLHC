@@ -28,13 +28,18 @@ metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','AC
 RandomForestClassifier.getScores = models.CNN_Model.getScores
 
 models_ = [
+    models.LSTM_Model(epochs=1),
     RandomForestClassifier(n_jobs=-1),
     models.Residual_CNN(verbose=0),
     models.CNN_Model(),
-    models.LSTM_Model(epochs=1)
 ]
 
 params = [
+    {
+        'verbose': [1],
+        'hidden': [16, 32, 64],
+        'dense': [16, 32, 64]
+    },
     {
         'n_estimators' : [10, 100, 200],
     },
@@ -49,9 +54,7 @@ params = [
         'dense_size': [16, 32, 64],
         'verbose': [0]
     },
-    {
-        'verbose': [0]
-    }
+    
 ]
 
 for param, model in zip(params, models_):
