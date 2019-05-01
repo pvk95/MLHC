@@ -2,8 +2,10 @@ import pandas as pd
 import os
 import sys
 import models
+import types
 import numpy as np
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
+from sklearn.ensemble import RandomForestClassifier
 
 gpu = 0
 lstm_out = 100
@@ -23,13 +25,19 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
+RandomForestClassifier.getScores = models.CNN_Model.getScores
+
 models_ = [
+    RandomForestClassifier(n_jobs=-1),
     models.Residual_CNN('residual', verbose=0),
     models.CNN_Model('baseline'),
     models.LSTM_Model('LSTM', epochs=1)
 ]
 
 params = [
+    {
+        'n_estimators' : [10, 100, 200],
+    },
     {
         'deepness': range(4,6),
         'name': ['residual'],
@@ -51,9 +59,16 @@ params = [
 
 for param, model in zip(params, models_):
     clf = RandomizedSearchCV(model, param, cv=2, n_jobs=1)
-    clf.fit(X, Y)
-    model = clf.best_estimator_
-    metrics_df = model.getScores(X_test, Y_test, metrics_df)
+    if type(model) == RandomForestClassifier:
+        clf.fit(np.squeeze(X), Y)
+        model = clf.best_estimator_
+        model.name = "RandomForestClassifier"
+        model.getScores = types.MethodType(models.CNN_Model.getScores, model)
+        metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
+    else:
+        clf.fit(X, Y)
+        model = clf.best_estimator_
+        metrics_df = model.getScores(X_test, Y_test, metrics_df)
     print(metrics_df)
 
 print(metrics_df)
