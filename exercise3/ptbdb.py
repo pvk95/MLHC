@@ -25,8 +25,6 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
-RandomForestClassifier.getScores = models.CNN_Model.getScores
-
 models_ = [
     models.LSTM_Model(),
     RandomForestClassifier(n_jobs=-1),
