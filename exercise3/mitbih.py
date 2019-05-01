@@ -4,7 +4,7 @@ import sys
 import models
 import types
 import numpy as np
-import keras
+from tensorflow import keras
 from sklearn.model_selection import train_test_split, GridSearchCV, RandomizedSearchCV
 from sklearn.ensemble import RandomForestClassifier
 
@@ -44,7 +44,8 @@ params = [
     {
         'verbose': [1],
         'hidden': [16, 32, 64],
-        'dense': [16, 32, 64]
+        'dense': [16, 32, 64],
+        'outputs':[5]
     },
     # RandomForestClassifier
     {
@@ -54,7 +55,8 @@ params = [
     # Residual_CNN
     {
         'deepness': range(1,6),
-        'verbose': [0]
+        'verbose': [0],
+        'outputs':[5]
     },
     # CNN_Model
     {   
@@ -62,7 +64,8 @@ params = [
         'conv2_size': [32, 64],
         'conv3_size': [128, 256],
         'dense_size': [16, 32, 64],
-        'verbose': [0]
+        'verbose': [0],
+        'outputs':[5]
     },
     
 ]
