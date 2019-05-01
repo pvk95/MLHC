@@ -61,48 +61,54 @@ X_test = np.array(df_test[list(range(186))].values)[..., np.newaxis]
 metrics_df = pd.DataFrame(data=[],columns=['Name','f1_score','AUROC','AUPRC','ACC'])
 
 models_ = [
-    sklearn.mixture.GaussianMixture(n_components=2),
-    sklearn.mixture.BayesianGaussianMixture(n_components=2),
+    # sklearn.mixture.GaussianMixture(n_components=2),
+    # sklearn.mixture.BayesianGaussianMixture(n_components=2),
     models.LSTM_Model(verbose=0),
-    RandomForestClassifier(n_jobs=-1),
-    models.Residual_CNN(verbose=0),
+    # RandomForestClassifier(n_jobs=-1),
+    # models.Residual_CNN(verbose=0),
     models.CNN_Model(verbose=0),
 ]
 
 params = [
     # Gaussian mixture
-    {
-
-    },
+    # {
+    #
+    # },
     # Bayesian Mixture
-    {
-
-    },
+    # {
+    #
+    # },
     # LSTM
     {
         'hidden': [64],
-        'dense': [16, 32, 64]
+        'dense': [16]   # [16, 32, 64]
     },
     # RandomForestClassifier
-    {
-        'n_estimators' : [10, 100, 200],
-        'n_jobs':  [-1]
-    },
+    # {
+    #     'n_estimators' : [10, 100, 200],
+    #     'n_jobs':  [-1]
+    # },
     # Residual_CNN
-    {
-        'deepness': range(1,6),
-    },
+    # {
+    #     'deepness': range(1,6),
+    # },
     # CNN_Model
     {   
-        'conv1_size': [16, 32],
-        'conv2_size': [32, 64],
-        'conv3_size': [128, 256],
-        'dense_size': [16, 32, 64],
+        'conv1_size': [16],
+        'conv2_size': [32],
+        'conv3_size': [128],
+        'dense_size': [16],
+
+        # 'conv1_size': [16, 32],
+        # 'conv2_size': [32, 64],
+        # 'conv3_size': [128, 256],
+        # 'dense_size': [16, 32, 64],
     },
     
 ]
 
 model_preds = []
+model_preds_train = []
 for param, model in zip(params, models_):
     clf = RandomizedSearchCV(model, param, cv=2, n_iter=5, verbose=2)
     if type(model) == RandomForestClassifier or \
@@ -117,6 +123,9 @@ for param, model in zip(params, models_):
         model = clf.best_estimator_
         pred,metrics_df = model.getScores(X_test, Y_test, metrics_df)
         model_preds.append(pred)
+
+        pred_train, _ = model.getScores(X, Y, metrics_df)
+        model_preds_train.append(pred_train)
     print(metrics_df)
 
 model_preds = np.array(model_preds)
@@ -127,11 +136,19 @@ avg_pred = np.mean(model_preds,axis=0)
 metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df)
 
 #Logistic regression
+# from sklearn.linear_model import LogisticRegression
+# lg = LogisticRegression(n_jobs=-1)
+# X_lg = np.transpose(model_preds,[1,0])
+# lg.fit(X_lg,Y_test)
+# lg_pred = lg.predict_proba(X_lg)[:,1]
+# metrics_df = getScores('Ensemble(LG)',Y_test=Y_test,pred_test=lg_pred,metrics_df=metrics_df)
+
 from sklearn.linear_model import LogisticRegression
 lg = LogisticRegression(n_jobs=-1)
-X_lg = np.transpose(model_preds,[1,0])
-lg.fit(X_lg,Y_test)
-lg_pred = lg.predict_proba(X_lg)[:,1]
+X_lg_train = np.transpose(model_preds_train,[1,0])
+X_lg_test = np.transpose(model_preds,[1,0])
+lg.fit(X_lg_train,Y)
+lg_pred = lg.predict_proba(X_lg_test)[:,1]
 metrics_df = getScores('Ensemble(LG)',Y_test=Y_test,pred_test=lg_pred,metrics_df=metrics_df)
 
 print(metrics_df)
