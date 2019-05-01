@@ -25,6 +25,7 @@ class Model(object):
         redonplat = ReduceLROnPlateau(monitor="val_acc", mode="max", patience=3, verbose=self.verbose)
         callbacks_list = [checkpoint, early, redonplat]  # early
 
+        #self.model.fit(X, Y, epochs=1, verbose=self.verbose, callbacks=callbacks_list, validation_split=0.1)
         self.model.fit(X, Y, epochs=self.epochs, verbose=self.verbose, callbacks=callbacks_list, validation_split=0.1)
         #self.model.load_weights(type(self).__name__ + '.h5')
         return self
@@ -33,7 +34,8 @@ class Model(object):
         return self.model.evaluate(X,Y)[1]
 
     def getScores(self, X_test, Y_test, metrics_df):
-        pred_test = self.predict(X_test)
+        pred_test = np.squeeze(self.predict(X_test))
+        pred = pred_test.copy()
         fpr, tpr, _ = roc_curve(Y_test, pred_test)
         auroc = auc(fpr, tpr)
         precision, recall, _ = precision_recall_curve(Y_test, pred_test)
@@ -43,7 +45,7 @@ class Model(object):
         acc = accuracy_score(Y_test, pred_test)
         curr_metrics = {'Name':type(self).__name__,'f1_score': f1, "AUROC": auroc, "AUPRC": auprc, "ACC": acc}
         metrics_df = metrics_df.append(curr_metrics,ignore_index = True)
-        return metrics_df
+        return pred,metrics_df
 
 
 
