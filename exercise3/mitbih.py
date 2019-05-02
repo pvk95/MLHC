@@ -114,7 +114,7 @@ model_preds = np.squeeze(model_preds)
 
 #Avg ensemble:
 avg_pred = np.mean(model_preds,axis=0)
-metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df, multilabel=True)
+metrics_df = getScores('Ensemble(Avg)',Y_test=Y_test,pred_test=avg_pred,metrics_df=metrics_df)
 
 #Logistic regression
 from sklearn.linear_model import LogisticRegression
