@@ -74,17 +74,13 @@ class Model(object):
 
     def getScores_multi(self, X_test, Y_test, metrics_df):
         if type(self) == sklearn.mixture.GaussianMixture or \
-            type(self) == sklearn.mixture.BayesianGaussianMixture:
+            type(self) == sklearn.mixture.BayesianGaussianMixture or \
+            type(self) == sklearn.ensemble.RandomForestClassifier:
             pred_test = self.predict_proba(X_test)
-            pred_test_temp = np.argmax(pred_test, axis=-1)
-        elif type(self) == sklearn.ensemble.RandomForestClassifier:
-            pred_test = self.predict_proba(X_test)
-            pred_test = np.array(pred_test)[:,:,1]
-            pred_test_temp = np.argmax(pred_test, axis=0)
         else:
             pred_test = (self.predict(X_test))
-            pred_test_temp = np.argmax(pred_test,axis=-1)
 
+        pred_test_temp = np.argmax(pred_test,axis=-1)
         pred = pred_test.copy()
         Y_test_temp = np.argmax(Y_test, axis=-1)
         acc = accuracy_score(Y_test_temp, pred_test_temp)
