@@ -41,7 +41,7 @@ class Model(object):
     def score(self, X, Y):
         return self.model.evaluate(X,Y)[1]
 
-    def getScores(self, X_test, Y_test, metrics_df, multilabel=False):
+    def getScores(self, X_test, Y_test, metrics_df, multilabel=False, eval_train=False):
         pred_test = np.squeeze(self.predict(X_test))
         pred = pred_test.copy()
 
@@ -69,7 +69,8 @@ class Model(object):
         # comput accuracy
         acc = accuracy_score(Y_test, pred_test)
         curr_metrics = {'Name':type(self).__name__,'f1_score': f1, "AUROC": auroc, "AUPRC": auprc, "ACC": acc}
-        metrics_df = metrics_df.append(curr_metrics, ignore_index = True)
+        if not eval_train:
+            metrics_df = metrics_df.append(curr_metrics, ignore_index = True)
         return pred, metrics_df
 
     def getScores_multi(self, X_test, Y_test, metrics_df):
