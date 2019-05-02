@@ -98,7 +98,7 @@ for param, model in zip(params, models_):
     if type(model) == RandomForestClassifier or \
         type(model) == sklearn.mixture.GaussianMixture or \
         type(model) == sklearn.mixture.BayesianGaussianMixture:
-        clf.fit(np.squeeze(X), Y)
+        clf.fit(np.squeeze(X), np.argmax(Y,axis=-1))
         model = clf.best_estimator_
         model.getScores = types.MethodType(models.CNN_Model.getScores_multi, model)
         _, metrics_df = model.getScores(np.squeeze(X_test), Y_test, metrics_df)
