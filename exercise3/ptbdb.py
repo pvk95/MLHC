@@ -81,7 +81,8 @@ params = [
     # LSTM
     {
         'hidden': [64],
-        'dense': [16]   # [16, 32, 64]
+        # 'dense': [16],
+        'dense': [16, 32, 64]
     },
     # RandomForestClassifier
     # {
@@ -94,15 +95,15 @@ params = [
     # },
     # CNN_Model
     {   
-        'conv1_size': [16],
-        'conv2_size': [32],
-        'conv3_size': [128],
-        'dense_size': [16],
+        # 'conv1_size': [16],
+        # 'conv2_size': [32],
+        # 'conv3_size': [128],
+        # 'dense_size': [16],
 
-        # 'conv1_size': [16, 32],
-        # 'conv2_size': [32, 64],
-        # 'conv3_size': [128, 256],
-        # 'dense_size': [16, 32, 64],
+        'conv1_size': [16, 32],
+        'conv2_size': [32, 64],
+        'conv3_size': [128, 256],
+        'dense_size': [16, 32, 64],
     },
     
 ]
@@ -124,7 +125,7 @@ for param, model in zip(params, models_):
         pred,metrics_df = model.getScores(X_test, Y_test, metrics_df)
         model_preds.append(pred)
 
-        pred_train, _ = model.getScores(X, Y, metrics_df)
+        pred_train, _ = model.getScores(X, Y, metrics_df, eval_train=True)
         model_preds_train.append(pred_train)
     print(metrics_df)
 
