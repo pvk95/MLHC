@@ -1,8 +1,9 @@
+from tensorflow import keras
+from tensorflow.keras.callbacks import EarlyStopping
 import tensorflow as tf
 import os
 import sys
 import h5py
-from tensorflow import keras
 import numpy as np
 import pandas as pd
 import pickle
@@ -74,11 +75,12 @@ class UNet(object):
         return conv2
 
     def fit(self, X, y):
+        early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
         self.model = self.create_model()
         self.model.compile(optimizer=keras.optimizers.Adam(),
                            loss='binary_crossentropy', metrics=['accuracy'])
         self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
-                       epochs=self.epochs)
+                       validation_split=0.1, epochs=self.epochs, callbacks=[early])
         return self
 
     def predict(self, X):
@@ -107,12 +109,16 @@ class UNet(object):
         for paramter, value in paramters.items():
             setattr(self, paramter, value)
 
-    def train(self, X_train, Y_train, X_valid, Y_valid):
+    def train(self, X_train, Y_train, validation_data=None):
         self.model = self.create_model()
         self.model.compile(optimizer=keras.optimizers.Adam(),
                            loss='binary_crossentropy', metrics=['accuracy'])
-        history = self.model.fit(x=X_train, y=Y_train, validation_data=(X_valid, Y_valid),
-                       batch_size=self.batch_size, verbose=self.verbose, epochs=self.epochs)
+        if not validation_data:
+            history = self.model.fit(x=X_train, y=Y_train, validation_split=0.1,
+                        batch_size=self.batch_size, verbose=self.verbose, epochs=self.epochs)
+        else:
+            history = self.model.fit(x=X_train, y=Y_train, validation_data=validation_data,
+                        batch_size=self.batch_size, verbose=self.verbose, epochs=self.epochs)
 
         training_loss = history.history['loss']
         val_loss = history.history['val_loss']
