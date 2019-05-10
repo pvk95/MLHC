@@ -74,13 +74,17 @@ class UNet(object):
 
         return conv2
 
-    def fit(self, X, y):
+    def fit(self, X, y, validation_data=None):
         early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
         self.model = self.create_model()
         self.model.compile(optimizer=keras.optimizers.Adam(),
                            loss='binary_crossentropy', metrics=['accuracy'])
-        self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
-                       validation_split=0.1, epochs=self.epochs, callbacks=[early])
+        if not validation_data:
+            self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
+                        validation_split=0.1, epochs=self.epochs, callbacks=[early])
+        else:
+            self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
+                        validation_data=validation_data, epochs=self.epochs, callbacks=[early])
         return self
 
     def predict(self, X):
