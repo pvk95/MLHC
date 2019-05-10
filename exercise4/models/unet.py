@@ -40,7 +40,7 @@ class UNet(object):
             filters = 2**(6 + x)
             inp = self.upconv_layer(filters, inp, self.skip[x])
 
-        output = keras.layers.Conv2D(1, 1, activation='sigmoid')(inp)
+        output = keras.layers.Conv2D(3, 1, activation='softmax')(inp)
         model = keras.models.Model(inputs=self.input, outputs=output)
         model.summary()
         return model
@@ -78,13 +78,17 @@ class UNet(object):
         early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
         self.model = self.create_model()
         self.model.compile(optimizer=keras.optimizers.Adam(),
-                           loss='binary_crossentropy', metrics=['accuracy'])
+                           loss='categorical_crossentropy', metrics=['accuracy'])
         if not validation_data:
             self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
                         validation_split=0.1, epochs=self.epochs, callbacks=[early])
         else:
             self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
                         validation_data=validation_data, epochs=self.epochs, callbacks=[early])
+
+        if not os.path.exists(self.save_folder + 'checkpoint/'):
+            os.makedirs(self.save_folder + 'checkpoint/')
+        tf.keras.models.save_model(self.model,self.save_folder + 'checkpoint/Unet.h5')
         return self
 
     def predict(self, X):
@@ -94,11 +98,9 @@ class UNet(object):
             sys.exit(1)
         self.model = tf.keras.models.load_model(fileName)
         y_pred = self.model.predict(X, batch_size=self.batch_size)
-        y_pred = (y_pred >= 0.5).astype(np.int)
+        y_pred = np.argmax(y_pred,axis=-1).astype(np.int)
 
-        with h5py.File(self.save_folder + 'predictions.h5', 'w') as f:
-            f['data'] = y_pred
-
+        return y_pred
 
     def get_params(self, deep=True):
         return {
