@@ -92,7 +92,7 @@ class UNet(object):
         return self
 
     def predict(self, X):
-        fileName = self.save_folder + 'checkpoint/UNet.h5'
+        fileName = self.save_folder + 'checkpoint/Unet.h5'
         if not os.path.isfile(fileName):
             print("Model not found! Exiting ...")
             sys.exit(1)
