@@ -9,6 +9,21 @@ import pandas as pd
 import pickle
 
 
+def dice_coeff(y_true, y_pred):
+  smooth = 1.
+  # Flatten
+  y_true_f = tf.reshape(y_true, [-1])
+  y_pred_f = tf.reshape(y_pred, [-1])
+  intersection = tf.reduce_sum(y_true_f * y_pred_f)
+  score = (2. * intersection + smooth) / (tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f) + smooth)
+  return score
+
+
+def dice_loss(y_true, y_pred):
+  loss = 1 - dice_coeff(y_true, y_pred)
+  return loss
+
+
 class UNet(object):
     def __init__(self,save_folder,input_shape=(400, 400, 3), epochs=30, verbose=1, batch_size=4, deepness=4):
         self.input_shape = input_shape
@@ -31,8 +46,10 @@ class UNet(object):
         # lowest layer
         conv1 = keras.layers.Conv2D(
             2**(6 + self.deepness), 3, activation='relu', padding='same')(inp)
+        conv1 = keras.layers.BatchNormalization()(conv1)
         conv2 = keras.layers.Conv2D(
             2**(6 + self.deepness), 3, activation='relu', padding='same')(conv1)
+        conv2 = keras.layers.BatchNormalization()(conv2)
 
         # Upsample and convolutions
         inp = conv2
@@ -48,37 +65,45 @@ class UNet(object):
     def conv_layer(self, filters, inp):
         conv1 = keras.layers.Conv2D(
             filters, 3, activation='relu', padding='same')(inp)
+        conv1 = keras.layers.BatchNormalization()(conv1)
         conv2 = keras.layers.Conv2D(
             filters, 3, activation='relu', padding='same')(conv1)
+        conv2 = keras.layers.BatchNormalization()(conv2)
         max_pool = keras.layers.MaxPool2D(2, strides=2)(conv2)
         return conv2, max_pool
 
     def upconv_layer(self, filters, inp, skip):
         up_conv = keras.layers.Conv2DTranspose(filters, 2, 2)(inp)
-        up_shape = up_conv.shape.as_list()
-        skip_shape = skip.shape.as_list()
+        # up_shape = up_conv.shape.as_list()
+        # skip_shape = skip.shape.as_list()
+        #
+        # x_start = (skip_shape[1] - up_shape[1]) // 2
+        # y_start = (skip_shape[2] - up_shape[2]) // 2
+        # x_end = x_start + up_shape[1]
+        # y_end = y_start + up_shape[2]
+        #
+        # cut_skip = keras.layers.Lambda(
+        #     lambda x: x[:, x_start:x_end, y_start: y_end, :])(skip)
 
-        x_start = (skip_shape[1] - up_shape[1]) // 2
-        y_start = (skip_shape[2] - up_shape[2]) // 2
-        x_end = x_start + up_shape[1]
-        y_end = y_start + up_shape[2]
-
-        cut_skip = keras.layers.Lambda(
-            lambda x: x[:, x_start:x_end, y_start: y_end, :])(skip)
-
-        merge = keras.layers.concatenate([cut_skip, up_conv], axis=-1)
+        # merge = keras.layers.concatenate([cut_skip, up_conv], axis=-1)
+        merge = keras.layers.concatenate([skip, up_conv], axis=-1)
+        merge = keras.layers.BatchNormalization()(merge)
         conv1 = keras.layers.Conv2D(
             filters, 3, activation='relu', padding='same')(merge)
+        conv1 = keras.layers.BatchNormalization()(conv1)
         conv2 = keras.layers.Conv2D(
             filters, 3, activation='relu', padding='same')(conv1)
+        conv2 = keras.layers.BatchNormalization()(conv2)
 
         return conv2
 
     def fit(self, X, y, validation_data=None):
         early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
         self.model = self.create_model()
+        # self.model.compile(optimizer=keras.optimizers.Adam(),
+        #                    loss='categorical_crossentropy', metrics=['accuracy'])
         self.model.compile(optimizer=keras.optimizers.Adam(),
-                           loss='categorical_crossentropy', metrics=['accuracy'])
+                           loss=dice_loss, metrics=['accuracy'])
         if not validation_data:
             self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
                         validation_split=0.1, epochs=self.epochs, callbacks=[early])
@@ -92,11 +117,11 @@ class UNet(object):
         return self
 
     def predict(self, X):
-        fileName = self.save_folder + 'checkpoint/Unet.h5'
+        fileName = self.save_folder + 'checkpoint/UNet.h5'
         if not os.path.isfile(fileName):
             print("Model not found! Exiting ...")
             sys.exit(1)
-        self.model = tf.keras.models.load_model(fileName)
+        self.model = tf.keras.models.load_model(fileName, custom_objects={'dice_loss': dice_loss})
         y_pred = self.model.predict(X, batch_size=self.batch_size)
         y_pred = np.argmax(y_pred,axis=-1).astype(np.int)
 
