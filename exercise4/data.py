@@ -80,8 +80,53 @@ def apply_transformation(X, Y, transform, subsample):
 
 def augment_data(X, Y):
     np.random.seed(10)
-    X, Y = apply_transformation(X, Y, shear_img, 5)
+    X, Y = apply_transformation(X, Y, shear_img, 1)
     return X, Y
+
+def sliding_window(image):
+    images = []
+    for y in range(3):
+        for x in range(3):
+            img = image[x*64:128+x*64,y*64:128+y*64]
+            images.append(img)
+    return images
+
+def sub_images(images):
+    sub_images = []
+    for image in images:
+        imgs = sliding_window(image)
+        sub_images.append(imgs)
+    sub_images = np.concatenate(sub_images)
+    return sub_images
+
+def reconstruct_image_sum(sub_images):
+    image = np.zeros((256, 256, 3))
+    for y in range(3):
+        for x in range(3):
+            idx = x + 3*y
+            image[x*64: 128+x*64, y*64: 128+64*y,:] += sub_images[idx]
+    return image
+
+def reconstruct_image_median(sub_images):
+    image = np.empty((256,256,3,9))
+    image.fill(np.nan)
+    for y in range(3):
+        for x in range(3):
+            idx = x + 3*y
+            image[x*64: 128+x*64, y*64: 128+64*y, :, idx] = sub_images[idx]
+    image = np.nanmedian(image, 3)
+    return image
+
+def reconstruct_array(array):
+    images = []
+    length = array.shape[0]
+    splits = length //9
+    for imgs in np.split(array, splits):
+        img = reconstruct_image_median(imgs)
+        images.append(img)
+    return images
+
+
 
 def getMetrics(gt,pred):
 

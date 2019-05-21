@@ -15,34 +15,45 @@ train_X, test_X, train_Y, test_Y = train_test_split(
     train_images, train_labels, test_size=0.1, random_state=42)
 
 train_X, train_Y = data.augment_data(train_X, train_Y)
-train_X = np.array(train_X)
-train_Y = np.array(train_Y)
+sub_train_X = data.sub_images(train_X)
+sub_train_Y = data.sub_images(train_Y)
+sub_test_X = data.sub_images(test_X)
+sub_test_Y = data.sub_images(test_Y)
 
-train_X = train_X[:, 64:192, 64:192]
-train_Y = train_Y[:, 64:192, 64:192]
-cropped_test_X = test_X[:, 64:192, 64:192]
-cropped_test_Y = test_Y[:, 64:192, 64:192]
 
-train_Y = data.disc_labels(train_Y)
-cropped_test_Y = data.disc_labels(cropped_test_Y)
+sub_train_Y = data.disc_labels(sub_train_Y)
+sub_test_Y = data.disc_labels(sub_test_Y)
 
-train_X = train_X[..., np.newaxis]
-cropped_test_X = cropped_test_X[..., np.newaxis]
+sub_train_X = sub_train_X[..., np.newaxis]
+sub_test_X = sub_test_X[..., np.newaxis]
 
-train_X, train_Y = shuffle(train_X, train_Y)
+sub_train_X, sub_train_Y = shuffle(sub_train_X, sub_train_Y)
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = str(7)
 #os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 unet = models.UNet('./', input_shape=(128, 128, 1),
                    epochs=100, deepness=3, verbose=1, batch_size=32)
-#unet.fit(train_X, train_Y, (cropped_test_X, cropped_test_Y))
-cropped_pred_Y = unet.predict(cropped_test_X)
-cropped_pred_Y = np.argmax(cropped_pred_Y, axis=-1).astype(int)
+unet.fit(sub_train_X, sub_train_Y, (sub_test_X, sub_test_Y))
+sub_pred_Y = unet.predict(sub_test_X)
+pred_Y = data.reconstruct_array(sub_pred_Y)
+pred_Y = np.array(pred_Y)
+pred_Y.shape
+pred_Y = np.argmax(pred_Y, axis=-1).astype(int)
 
-pred_Y = np.pad(cropped_pred_Y, ((0, 0), (64, 64), (64, 64)), 'constant', constant_values=0)
+import matplotlib.pyplot as plt
+f, axarr = plt.subplots(2, 3)
+axarr[0, 0].imshow(test_Y[10])
+axarr[1, 0].imshow(pred_Y[10])
+axarr[0, 1].imshow(test_Y[20])
+axarr[1, 1].imshow(pred_Y[20])
+axarr[0, 2].imshow(test_Y[30])
+axarr[1, 2].imshow(pred_Y[30])
+plt.show()
+
 print(pred_Y.shape)
 #test_Y = np.argmax(test_Y,axis=-1)
+
 op,pc,iou = data.getMetrics(test_Y,pred_Y)
 curr_metrics = {'OP':op,'PC':pc,'IoU':iou}
 
