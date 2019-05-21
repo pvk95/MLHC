@@ -41,16 +41,6 @@ pred_Y = np.array(pred_Y)
 pred_Y.shape
 pred_Y = np.argmax(pred_Y, axis=-1).astype(int)
 
-import matplotlib.pyplot as plt
-f, axarr = plt.subplots(2, 3)
-axarr[0, 0].imshow(test_Y[10])
-axarr[1, 0].imshow(pred_Y[10])
-axarr[0, 1].imshow(test_Y[20])
-axarr[1, 1].imshow(pred_Y[20])
-axarr[0, 2].imshow(test_Y[30])
-axarr[1, 2].imshow(pred_Y[30])
-plt.show()
-
 print(pred_Y.shape)
 #test_Y = np.argmax(test_Y,axis=-1)
 
