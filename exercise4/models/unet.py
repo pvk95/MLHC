@@ -1,5 +1,5 @@
 from tensorflow import keras
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import tensorflow as tf
 import os
 import sys
@@ -76,15 +76,16 @@ class UNet(object):
 
     def fit(self, X, y, validation_data=None):
         early = EarlyStopping(monitor="val_acc", mode="max", patience=5, verbose=self.verbose)
+        redonplat = ReduceLROnPlateau(monitor="val_acc", mode="max", patience=3, verbose=self.verbose)
         self.model = self.create_model()
         self.model.compile(optimizer=keras.optimizers.Adam(),
                            loss='categorical_crossentropy', metrics=['accuracy'])
         if not validation_data:
             self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
-                        validation_split=0.1, epochs=self.epochs, callbacks=[early])
+                        validation_split=0.1, epochs=self.epochs, callbacks=[early, redonplat])
         else:
             self.model.fit(x=X, y=y, batch_size=self.batch_size, verbose=self.verbose,
-                        validation_data=validation_data, epochs=self.epochs, callbacks=[early])
+                        validation_data=validation_data, epochs=self.epochs, callbacks=[early, redonplat])
 
         if not os.path.exists(self.save_folder + 'checkpoint/'):
             os.makedirs(self.save_folder + 'checkpoint/')
@@ -98,7 +99,6 @@ class UNet(object):
             sys.exit(1)
         self.model = tf.keras.models.load_model(fileName)
         y_pred = self.model.predict(X, batch_size=self.batch_size)
-        y_pred = np.argmax(y_pred,axis=-1).astype(np.int)
 
         return y_pred
 
