@@ -27,7 +27,9 @@ def get_data():
     source_path = 'exercise_data/project4_data/data/'
     train_images = []
     train_labels = []
+    test_labels = []
     test_images = []
+    test_labels_rot = []
     test_images_rot = []
 
     # train images
@@ -44,17 +46,26 @@ def get_data():
     for x in range(50,60):
         test_image_path = os.path.join(source_path, f'test_images/sample-{x}.npy')
         test_image_rot_path = os.path.join(source_path, f'test_images_randomly_rotated/sample-{x}.npy')
+        test_label_path = os.path.join(source_path, f'test_labels/sample-{x}.npy')
+        test_label_rot_path = os.path.join(source_path, f'test_labels_randomly_rotated/sample-{x}.npy')
         test_mri_image = np.load(test_image_path)
         test_mri_rot = np.load(test_image_rot_path)
+        test_label = np.load(test_label_path)
+        test_label_rot = np.load(test_label_rot_path)
         if x==52:
             test_mri_image = fix_shape(test_mri_image)
             test_mri_rot = fix_shape(test_mri_rot)
+            test_label = fix_shape(test_label)
+            test_label_rot = fix_shape(test_label_rot)
 
         test_images.append(test_mri_image)
+        test_labels.append(test_label)
         test_images_rot.append(test_mri_rot)
+        test_labels_rot.append(test_label_rot)
 
     return np.concatenate(train_images), np.concatenate(train_labels), \
-           np.concatenate(test_images), np.concatenate(test_images_rot)
+           np.concatenate(test_images), np.concatenate(test_images_rot), \
+           np.concatenate(test_labels), np.concatenate(test_labels_rot)
 
 def shear_img(img, label):
     shear_angle = np.random.random() - 0.5
