@@ -63,9 +63,9 @@ def get_data():
         test_images_rot.append(test_mri_rot)
         test_labels_rot.append(test_label_rot)
 
-    return np.concatenate(train_images), np.concatenate(train_labels), \
-           np.concatenate(test_images), np.concatenate(test_images_rot), \
-           np.concatenate(test_labels), np.concatenate(test_labels_rot)
+    return train_images, train_labels, \
+           test_images, test_images_rot, \
+           test_labels, test_labels_rot
 
 def shear_img(img, label):
     shear_angle = np.random.random() - 0.5
